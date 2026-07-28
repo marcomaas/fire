@@ -404,8 +404,9 @@ def build_fire(config):
     # Aussage. Zerfaellt der Brand in viele Flecken, wird stattdessen zwischen
     # den vollstaendigen Zustaenden gewechselt - sonst stuende der ueberblendete
     # Umriss fast still, waehrend die Flaechenangabe sich vervielfacht.
-    min_share = min(step["largest_share"] for step in steps)
-    mode = "morph" if min_share >= MORPH_SHARE_THRESHOLD else "crossfade"
+    shares = [step["largest_share"] for step in steps]
+    min_share = min(shares)
+    mode = pick_mode(shares)
     print(
         f"   Modus: {mode} (kleinster Anteil der groessten Teilflaeche: {min_share * 100:.0f}%)",
         flush=True,
@@ -517,6 +518,23 @@ def discover(look_back=14, miss_limit=8):
             f"    # {c['countries']}, {c['steps']} Zeitschnitte, {'abgeschlossen' if c['closed'] else 'noch offen'}\n"
         )
     return 0
+
+
+def pick_mode(shares):
+    """Waehlt den Darstellungsmodus aus den Flaechenanteilen aller Zeitschnitte.
+
+    Dominiert in jedem Stand eine zusammenhaengende Flaeche, traegt das
+    Ueberblenden der Umrisse die Aussage. Faellt der Anteil in einem Stand
+    darunter, verteilt sich der Brand auf viele getrennte Flecken - dann wuerde
+    ein Ueberblenden nur der Hauptflaeche Stillstand suggerieren, waehrend die
+    Gesamtflaeche steigt.
+
+    Ausschlaggebend ist der kleinste Anteil der Reihe, nicht der Durchschnitt:
+    ein einziger zerstreuter Stand macht die Morphing-Darstellung irrefuehrend.
+    """
+    if not shares:
+        return "crossfade"
+    return "morph" if min(shares) >= MORPH_SHARE_THRESHOLD else "crossfade"
 
 
 def load_existing():

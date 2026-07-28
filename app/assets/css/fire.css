@@ -377,6 +377,24 @@ nav#nav a:hover {
 	flex: 0 0 auto;
 }
 
+/* Der Brand-Block behaelt seine Hoehe, die Staedteliste gibt nach. Ohne das
+ * wuchs der Vergleichsblock ueber die Kartenhoehe hinaus und schob sich in
+ * Herkunftsangabe und Abspielknopf — auf einer 540 Pixel hohen Karte war
+ * "Manhattan" nur nach unentdecktem Scrollen erreichbar.
+ * min-height: 0 ist dabei entscheidend: ohne diese Angabe schrumpft ein
+ * Flex-Element nicht unter die Hoehe seines Inhalts. */
+#map-compare {
+	flex: 0 1 auto;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+#map-compare ul {
+	overflow-y: auto;
+	min-height: 0;
+}
+
 #map-fires h2,
 #map-compare h2 {
 	font-size: 11px;
@@ -599,7 +617,7 @@ html.in-frame #main {
 		right: auto;
 		bottom: 24px;
 		min-width: 0;
-		max-width: calc(100% - 132px);
+		max-width: calc(100% - 176px);
 	}
 
 	#map-startstop {
@@ -633,6 +651,14 @@ html.in-frame #main {
 		width: 132px;
 	}
 
+	#map-controls {
+		max-width: calc(100% - 156px);
+	}
+
+	#map-size {
+		font-size: 18px;
+	}
+
 	#map-fires,
 	#map-compare {
 		padding: 8px 9px 9px;
@@ -652,10 +678,6 @@ html.in-frame #main {
 		font-size: 12px;
 	}
 
-	#map-compare ul {
-		max-height: 168px;
-		overflow-y: auto;
-	}
 }
 
 /* Leaflet-Angaben an das Erscheinungsbild anpassen. */

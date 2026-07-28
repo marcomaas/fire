@@ -56,8 +56,37 @@ Monitoring-Stände nach. Ein erneuter Lauf verlängert die Animation dann automa
 
 ```bash
 python3 -m http.server 8000 --directory app
-# http://localhost:8000/index-de.html
+# http://localhost:8000/index-de.html      die Anwendung
+# http://localhost:8000/beispiel.html      Einbettungsbeispiele
 ```
+
+## Tests
+
+```bash
+python3 tests/test_geometry.py        # Rechenlogik der Pipeline
+python3 tests/run_layout_tests.py     # Layout in echten Rahmen, braucht Chrome
+```
+
+Beide laufen auch in der CI (`.github/workflows/tests.yml`), bei jedem Push und bei jedem
+automatischen Datenabgleich.
+
+**`test_geometry.py`** prüft, was still falsch werden kann: Flächenberechnung auf der Kugel,
+Neuabtastung der Umrisse, Wahl des Darstellungsmodus, Filtern der Produkte, Zusammenführen
+von Teil-Läufen und die Wohlgeformtheit der Liste `FIRES`. Standardbibliothek, kein pytest
+nötig.
+
+**`run_layout_tests.py`** bindet die Anwendung in `iframe`s von fünf Größen ein und prüft in
+beiden Sprachfassungen: keine Überlagerung sichtbarer Kästen, nichts außerhalb des
+Sichtbereichs, kein waagerechtes Überlaufen, Herkunftsangabe sichtbar und einzeilig, Quellen
+und Lizenz auch im eingebetteten Zustand erreichbar, kein Text auf gleichfarbigem Grund.
+
+Diese Tests entstanden aus vier tatsächlich aufgetretenen Fehlern und fanden beim ersten Lauf
+sofort sechzehn weitere. Beim Erweitern gilt: jede neue Prüfung einmal gegen eine eingebaute
+Mutation laufen lassen — ein Test, der nicht rot werden kann, ist wertlos.
+
+**Warum im `iframe` und nicht im Fenster:** Headless Chrome erzwingt eine Mindestfensterbreite
+von 500 Pixel. Ein Lauf mit `--window-size=400` rendert bei 500 und beschneidet nur das Bild —
+schmale Layouts lassen sich so nicht prüfen, und der Beschnitt sieht wie ein Layout-Fehler aus.
 
 ## Woher die Daten kommen
 
