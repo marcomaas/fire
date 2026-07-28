@@ -1,3 +1,0 @@
-# Geometrieverarbeitung fuer bin/fetch_ems.py und bin/build_cities.py.
-# Alles Weitere kommt aus der Standardbibliothek.
-shapely>=2.0

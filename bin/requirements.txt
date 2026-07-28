@@ -1,0 +1,7 @@
+# Geometrieverarbeitung fuer fetch_ems.py und build_cities.py.
+# Alles Weitere kommt aus der Standardbibliothek.
+#
+# Liegt bewusst hier und nicht im Wurzelverzeichnis: Vercel erkennt eine
+# requirements.txt im Repo-Wurzelverzeichnis als Python-Projekt und versucht
+# dann einen Build, obwohl die Anwendung rein statisch ist.
+shapely>=2.0

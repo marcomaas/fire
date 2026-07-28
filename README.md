@@ -38,7 +38,7 @@ data/*.geojson           Stadtgrenzen in echten Koordinaten (Quelldaten)
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+.venv/bin/pip install -r bin/requirements.txt
 
 .venv/bin/python bin/fetch_ems.py            # alle konfigurierten Brände
 .venv/bin/python bin/fetch_ems.py gironde    # nur einen
