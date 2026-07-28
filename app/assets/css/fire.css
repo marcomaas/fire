@@ -60,6 +60,11 @@ body {
 	margin: 0;
 	padding: 0;
 	height: 100%;
+	/* Sicherung: waechst ein Element ueber die Fensterbreite hinaus, wird das
+	 * Dokument breiter als das Fenster - und alles rechts Positionierte rutscht
+	 * mit hinaus. Trat bei 400 Pixel Breite auf, weil Logo, Titel und Navigation
+	 * in der Kopfzeile nicht nebeneinander passten. */
+	overflow-x: hidden;
 	background: var(--color-white);
 	color: var(--color-black);
 	font-family: var(--font-body), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -102,6 +107,9 @@ header {
 	align-items: center;
 	padding: 0 var(--gutter);
 	gap: 12px;
+	/* Der Titel darf schrumpfen und abgeschnitten werden, statt die Kopfzeile
+	 * ueber die Fensterbreite zu schieben. */
+	overflow: hidden;
 }
 
 /* Der Slash aus dem Datenfreunde-Logo als diagonaler Akzent. */
@@ -144,6 +152,10 @@ header h1 {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	/* min-width: 0 ist noetig, damit ein Flex-Element unter seine
+	 * Inhaltsbreite schrumpfen darf - ohne das greift text-overflow nicht. */
+	flex: 1 1 auto;
+	min-width: 0;
 }
 
 /* Archivo liegt nur im Schnitt 700 vor, ein staerkeres Gewicht liesse der
@@ -568,20 +580,68 @@ html.in-frame #main {
 		max-height: calc(100% - 130px);
 	}
 
-	#map-controls {
-		left: 8px;
-		right: 8px;
-		bottom: 8px;
-		min-width: 0;
-	}
-
 	#map-size {
 		font-size: 21px;
 	}
 
+	/* Abspielknopf und Zustandsanzeige teilen sich die untere Kante: der Knopf
+	 * rechts, die Anzeige links daneben. Vorher stand der Knopf mittig und die
+	 * Anzeige spannte sich über die volle Breite — beide lagen uebereinander,
+	 * die Beschriftung war nicht mehr lesbar. Aufgefallen im Hochformat-Beispiel
+	 * mit 400 Pixel Breite. */
+	#map-controls {
+		left: 8px;
+		right: auto;
+		bottom: 8px;
+		min-width: 0;
+		max-width: calc(100% - 132px);
+	}
+
 	#map-startstop {
-		width: 62px;
-		height: 62px;
+		left: auto;
+		right: 8px;
+		bottom: 8px;
+		transform: none;
+		height: 38px;
+		padding: 0 15px 0 13px;
+		font-size: 11px;
+		gap: 8px;
+	}
+
+	/* Die Auswahlbloecke duerfen die Karte nicht vollstaendig zudecken. Reicht
+	 * die Hoehe nicht, wird in ihnen gescrollt. */
+	.panel-stack {
+		max-height: calc(100% - 108px);
+	}
+}
+
+/* Sehr schmale Rahmen: die Staedteliste wird zur eigenen scrollenden Flaeche,
+ * damit der Auswahlblock fuer die Braende immer sichtbar bleibt. */
+@media (max-width: 460px) {
+	/* Bei dieser Breite bleibt kein Platz fuer Logo, Titel und Navigation. Der
+	 * Titel entfaellt - er steht ohnehin im Browser-Tab. */
+	header h1 {
+		display: none;
+	}
+
+	.panel-stack {
+		width: 132px;
+	}
+
+	#map-fires,
+	#map-compare {
+		padding: 8px 9px 9px;
+	}
+
+	#map-fires a,
+	#map-compare a {
+		padding: 4px 6px;
+		font-size: 12px;
+	}
+
+	#map-compare ul {
+		max-height: 168px;
+		overflow-y: auto;
 	}
 }
 

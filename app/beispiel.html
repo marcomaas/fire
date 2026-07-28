@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+	<meta charset="utf-8">
+	<title>Waldbrand-Grafik einbetten — Beispiele</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="description" content="Beispielseite: die Waldbrand-Visualisierung eingebettet im Quer- und im Hochformat, mit Einbettungscode.">
+	<meta name="robots" content="noindex">
+
+	<link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+	<link rel="stylesheet" href="assets/vendor/fonts/fonts.css">
+
+	<style>
+		/* Farben, Schriften und Abstände aus dem Datenfreunde Design System:
+		   suva-df/datenfreunde-design-system, material/design-tokens.json */
+		:root {
+			--color-black: #262626;
+			--color-yellow: #f2c029;
+			--color-blue: #65768c;
+			--color-brown: #a69485;
+			--color-white: #ffffff;
+			--color-grey: #cccccc;
+			--font-headline: 'Archivo', sans-serif;
+			--font-body: 'Source Sans Pro', sans-serif;
+			--font-weight-bold: 700;
+			--spacing-sm: 15px;
+			--spacing-md: 30px;
+			--spacing-lg: 50px;
+			--border-width-deco: 4px;
+			--code-backdrop: #f5f3f0;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			background: var(--color-white);
+			color: var(--color-black);
+			font-family: var(--font-body), sans-serif;
+			font-size: 17px;
+			line-height: 1.55;
+			-webkit-font-smoothing: antialiased;
+		}
+
+		.wrap {
+			max-width: 1120px;
+			margin: 0 auto;
+			padding: var(--spacing-md) var(--spacing-sm) var(--spacing-lg);
+		}
+
+		header.page {
+			border-bottom: 2px solid var(--color-black);
+			padding-bottom: var(--spacing-sm);
+			margin-bottom: var(--spacing-md);
+			display: flex;
+			align-items: center;
+			gap: 14px;
+			flex-wrap: wrap;
+		}
+
+		header.page img { height: 26px; }
+
+		h1 {
+			font-family: var(--font-headline);
+			font-size: 30px;
+			font-weight: var(--font-weight-bold);
+			text-transform: uppercase;
+			letter-spacing: 0.01em;
+			margin: 0;
+		}
+
+		h1 .subject { border-bottom: var(--border-width-deco) solid var(--color-yellow); }
+
+		h2 {
+			font-family: var(--font-headline);
+			font-size: 20px;
+			font-weight: var(--font-weight-bold);
+			text-transform: uppercase;
+			letter-spacing: 0.02em;
+			margin: var(--spacing-lg) 0 6px;
+		}
+
+		h2 .meta {
+			display: block;
+			font-family: var(--font-body);
+			font-size: 14px;
+			font-weight: 400;
+			text-transform: none;
+			letter-spacing: 0;
+			color: var(--color-blue);
+			margin-top: 3px;
+		}
+
+		p { margin: 0 0 var(--spacing-sm); max-width: 68ch; }
+
+		a { color: var(--color-black); text-underline-offset: 2px; }
+		a:hover { text-decoration-color: var(--color-yellow); text-decoration-thickness: 3px; }
+
+		.lede {
+			font-size: 19px;
+			border-left: var(--border-width-deco) solid var(--color-yellow);
+			padding-left: 14px;
+		}
+
+		/* Die Rahmen tragen bewusst einen sichtbaren Rand: so ist auf der
+		   Beispielseite erkennbar, wo die eingebettete Grafik endet. */
+		.demo {
+			border: 2px solid var(--color-black);
+			display: block;
+			max-width: 100%;
+		}
+
+		.demo-row {
+			display: flex;
+			gap: var(--spacing-md);
+			align-items: flex-start;
+			flex-wrap: wrap;
+		}
+
+		.demo-row > div { flex: 0 1 auto; min-width: 0; }
+
+		pre {
+			margin: 10px 0 0;
+			padding: 12px 14px;
+			background: var(--code-backdrop);
+			border: 1px solid var(--color-grey);
+			font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+			font-size: 12.5px;
+			line-height: 1.5;
+			overflow-x: auto;
+			white-space: pre;
+		}
+
+		.hint {
+			font-size: 15px;
+			color: var(--color-blue);
+			border-top: 1px solid var(--color-grey);
+			padding-top: 12px;
+			margin-top: var(--spacing-md);
+		}
+
+		footer.page {
+			margin-top: var(--spacing-lg);
+			padding-top: var(--spacing-sm);
+			border-top: 2px solid var(--color-black);
+			font-size: 14px;
+			color: var(--color-blue);
+		}
+
+		/* Ab hier wird das Hochformat nicht mehr neben dem Querformat gezeigt,
+		   sondern darunter — sonst quetscht sich beides. */
+		@media (max-width: 900px) {
+			h1 { font-size: 23px; }
+			.demo-row { flex-direction: column; }
+		}
+	</style>
+</head>
+<body>
+<div class="wrap">
+
+	<header class="page">
+		<a href="https://www.datenfreunde.com/" target="_blank" rel="noopener" title="Datenfreunde">
+			<img src="assets/img/df-logo.svg" alt="Datenfreunde">
+		</a>
+		<h1><span class="subject">Waldbrand-Grafik</span> einbetten</h1>
+	</header>
+
+	<p class="lede">
+		Diese Seite zeigt die Visualisierung in den beiden Seitenverhältnissen, die in der
+		Praxis vorkommen: quer im Artikeltext und hoch für schmale Spalten oder mobile
+		Ansichten. Darunter steht jeweils der Code zum Kopieren.
+	</p>
+
+	<h2>
+		Querformat
+		<span class="meta">960 × 540 · für die Textbreite eines Artikels</span>
+	</h2>
+	<p>
+		Der Regelfall. Bei dieser Breite haben Auswahlliste, Größenvergleich und Zeitanzeige
+		gleichzeitig Platz, ohne sich zu überlagern.
+	</p>
+	<iframe class="demo" src="index-de.html#gironde/bordeaux" width="960" height="540"
+		title="Waldbrände in Frankreich und Spanien, Querformat" loading="lazy"></iframe>
+<pre>&lt;iframe src="https://waldbraende.vercel.app/" width="960" height="540"
+        style="border:0" loading="lazy"
+        title="Waldbrände in Frankreich und Spanien"&gt;&lt;/iframe&gt;</pre>
+
+	<h2>
+		Hochformat
+		<span class="meta">400 × 720 · für schmale Spalten und mobile Ansichten</span>
+	</h2>
+	<p>
+		Unter 720 Pixel Breite rücken die Auswahlblöcke schmaler zusammen und die Zustandsanzeige
+		spannt sich über die volle Breite. Der Größenvergleich bleibt bedienbar, die Karte
+		bekommt aber deutlich weniger Fläche — für einen einzelnen Brand mit gesetztem Anker ist
+		das Format brauchbar, für die Umschaltung zwischen vier Bränden eher eng.
+	</p>
+
+	<div class="demo-row">
+		<div>
+			<iframe class="demo" src="index-de.html#central-spain/madrid" width="400" height="720"
+				title="Waldbrände in Frankreich und Spanien, Hochformat" loading="lazy"></iframe>
+<pre>&lt;iframe src="https://waldbraende.vercel.app/#central-spain"
+        width="400" height="720" style="border:0" loading="lazy"
+        title="Waldbrände in Frankreich und Spanien"&gt;&lt;/iframe&gt;</pre>
+		</div>
+		<div>
+			<h2 style="margin-top:0">
+				Anker setzen
+				<span class="meta">einen bestimmten Brand direkt öffnen</span>
+			</h2>
+			<p>
+				Ohne Anker startet die Grafik mit dem ersten Brand der Liste. Mit Anker lässt sich
+				gezielt öffnen, was zum Artikel passt — auch gleich mit eingeblendetem
+				Stadtvergleich.
+			</p>
+<pre>#gironde              Gironde, Frankreich
+#central-spain        La Atalaya, Spanien
+#biscarrosse          Biscarrosse, Frankreich
+#artana               Artana bei Valencia
+
+#gironde/bordeaux     mit Stadtumriss
+#central-spain/madrid mit Stadtumriss</pre>
+			<p class="hint">
+				Das linke Beispiel nutzt <code>#central-spain/madrid</code> — deshalb liegt der
+				Umriss von Madrid schon beim Laden über der Brandfläche.
+			</p>
+		</div>
+	</div>
+
+	<h2>
+		Mitwachsend
+		<span class="meta">Breite folgt dem Container, Höhe über das Seitenverhältnis</span>
+	</h2>
+	<p>
+		Wer keine festen Pixelmaße setzen will, bindet die Grafik über ein Seitenverhältnis ein.
+		Sie füllt dann die verfügbare Breite und behält die Proportion — das ist in
+		Content-Management-Systemen meist der bequemere Weg.
+	</p>
+	<div style="aspect-ratio: 16/9; width: 100%;">
+		<iframe class="demo" src="index-de.html#artana" style="width:100%;height:100%"
+			title="Waldbrände in Frankreich und Spanien, mitwachsend" loading="lazy"></iframe>
+	</div>
+<pre>&lt;div style="aspect-ratio: 16/9; max-width: 960px;"&gt;
+  &lt;iframe src="https://waldbraende.vercel.app/"
+          style="width:100%;height:100%;border:0" loading="lazy"
+          title="Waldbrände in Frankreich und Spanien"&gt;&lt;/iframe&gt;
+&lt;/div&gt;</pre>
+
+	<div class="hint">
+		<strong>Hinweise für die Einbettung.</strong>
+		Im Rahmen wird die Kopfzeile automatisch ausgeblendet, damit die Grafik nicht mit der
+		Seitennavigation der einbettenden Seite kollidiert. Die englische Fassung liegt unter
+		<code>/index-en.html</code>. Die Grafik lädt keine Zähldienste und setzt keine Cookies,
+		ein Einwilligungsbanner ist dafür also nicht nötig. Empfohlene Mindesthöhe: 420 Pixel —
+		darunter überlagern sich Zustandsanzeige und Abspielknopf.
+	</div>
+
+	<footer class="page">
+		Anwendung unter <a href="https://creativecommons.org/licenses/by/3.0/deed.de" target="_blank" rel="noopener">CC BY 3.0</a>,
+		nach einer Arbeit von <a href="https://github.com/opendatacity/fire" target="_blank" rel="noopener">OpenDataCity</a> (2013).
+		Brandumrisse: Copernicus EMS Rapid Mapping, © Europäische Union.
+		Stadtgrenzen: OpenStreetMap und Mitwirkende, ODbL. Reliefkarte: Esri.<br>
+		Quellcode: <a href="https://github.com/marcomaas/fire" target="_blank" rel="noopener">github.com/marcomaas/fire</a>
+	</footer>
+
+</div>
+</body>
+</html>
