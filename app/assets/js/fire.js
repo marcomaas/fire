@@ -52,6 +52,7 @@ $(document).ready(function () {
       play: "Verlauf",
       pause: "Pause",
       again: "Nochmal",
+      sources: "Quellen",
     },
     en: {
       dateFormat: "YYYY-MM-DD HH:mm",
@@ -73,6 +74,7 @@ $(document).ready(function () {
       play: "Play",
       pause: "Pause",
       again: "Replay",
+      sources: "Sources",
     },
   }[lang];
 
@@ -105,11 +107,16 @@ $(document).ready(function () {
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}",
     {
       maxZoom: 14,
+      /* Bewusst kurz gehalten. Die lange Fassung umbrach bei schmaler Breite auf
+       * zwei Zeilen und legte sich über Zustandsanzeige und Abspielknopf. Die
+       * vollständigen Quellen- und Lizenzangaben stehen im Info-Kasten, der
+       * jetzt auch im eingebetteten Zustand erreichbar ist — vorher war er es
+       * nicht, weil die Kopfzeile im Rahmen ausgeblendet wird. */
       attribution:
-        'Brandumrisse: <a href="https://mapping.emergency.copernicus.eu/" target="_blank" rel="noopener">Copernicus EMS</a> · ' +
-        'Stadtgrenzen: <a href="https://openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> · ' +
-        'Relief: <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> · ' +
-        'Anwendung <a href="https://github.com/marcomaas/fire" target="_blank" rel="noopener">CC BY</a>, nach einer Arbeit von OpenDataCity (2013)',
+        '<a href="https://mapping.emergency.copernicus.eu/" target="_blank" rel="noopener">Copernicus EMS</a> · ' +
+        '<a href="https://openstreetmap.org" target="_blank" rel="noopener">OSM</a> · ' +
+        '<a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> · ' +
+        '<a href="javascript:;" class="attr-info">' + text.sources + "</a>",
     },
   ).addTo(map);
 
@@ -506,7 +513,12 @@ $(document).ready(function () {
     }
   });
 
-  $("#button-info").click(function (evt) {
+  /* Der Verweis in der Herkunftsangabe öffnet denselben Kasten. Er ist die
+   * einzige Route dorthin, wenn die Anwendung eingebettet läuft und die
+   * Kopfzeile ausgeblendet ist — und damit der Weg, auf dem die Lizenz- und
+   * Quellenangaben auch beim Einbetten erreichbar bleiben. Delegiert
+   * gebunden, weil Leaflet die Herkunftsangabe selbst erzeugt. */
+  $(document).on("click", "#button-info, .attr-info", function (evt) {
     evt.preventDefault();
     $("#main").removeClass("show-share").toggleClass("show-info");
   });

@@ -588,11 +588,16 @@ html.in-frame #main {
 	 * rechts, die Anzeige links daneben. Vorher stand der Knopf mittig und die
 	 * Anzeige spannte sich über die volle Breite — beide lagen uebereinander,
 	 * die Beschriftung war nicht mehr lesbar. Aufgefallen im Hochformat-Beispiel
-	 * mit 400 Pixel Breite. */
+	 * mit 400 Pixel Breite.
+	 *
+	 * Der Abstand von 24 Pixel zur Unterkante laesst die Herkunftsangabe von
+	 * Leaflet frei. Leaflet legt sie auf eine hoehere Stapelebene, ein
+	 * Ueberlappen liesse sich also nicht durch z-index loesen - und verdecken
+	 * darf man sie ohnehin nicht. */
 	#map-controls {
 		left: 8px;
 		right: auto;
-		bottom: 8px;
+		bottom: 24px;
 		min-width: 0;
 		max-width: calc(100% - 132px);
 	}
@@ -600,7 +605,7 @@ html.in-frame #main {
 	#map-startstop {
 		left: auto;
 		right: 8px;
-		bottom: 8px;
+		bottom: 24px;
 		transform: none;
 		height: 38px;
 		padding: 0 15px 0 13px;
@@ -659,9 +664,22 @@ html.in-frame #main {
 	background: var(--map-backdrop);
 }
 
+/* Leaflet legt seine Bedienelemente auf Stapelebene 1000 und damit über die
+ * eigenen Kästen. Die Herkunftsangabe soll aber nicht verdeckt werden, sondern
+ * neben den Kästen Platz finden — deshalb wird sie hier auf eine Breite
+ * begrenzt, in der sie einzeilig bleibt, statt sie zu überdecken. */
 .leaflet-control-attribution {
-	background: rgba(255, 255, 255, 0.9) !important;
+	background: rgba(255, 255, 255, 0.92) !important;
 	font-size: 10px !important;
+	line-height: 1.5 !important;
+	color: var(--color-blue);
+	max-width: 100%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.leaflet-control-attribution a {
 	color: var(--color-blue);
 }
 
