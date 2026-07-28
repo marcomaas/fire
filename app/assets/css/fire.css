@@ -3,25 +3,51 @@
  *
  * Ersetzt das Stylesheet von 2013, das auf Bootstrap 3 und Font Awesome 3
  * aufsetzte und die Bedienelemente in dunkle, halbtransparente Kaesten legte.
- * Grundlage ist der Datenfreunde-Styleguide: ueberwiegend Weiss, Schwarz und
- * Dunkelgrau fuer Text und Rahmen, Signalgelb sparsam als Akzent, Archivo fuer
- * Ueberschriften und Source Sans fuer Lauftext. Der diagonale Slash ist das
- * uebernommene Schluesselelement des Brandings.
+ *
+ * Farben, Schriften, Abstaende und Rahmenbreiten sind aus dem Design System der
+ * Datenfreunde uebernommen: suva-df/datenfreunde-design-system, Datei
+ * material/design-tokens.json. Namen und Werte absichtlich unveraendert, damit
+ * ein spaeterer Abgleich mit dem Design System offensichtlich bleibt.
+ *
+ * Eine bewusste Abweichung: Das Design System zeichnet Buttons mit gelbem Rahmen
+ * UND gelber Schrift. Hier liegen die Bedienelemente auf weissen Flaechen, wo
+ * Gelb auf Weiss nur etwa 1,9:1 Kontrast erreicht und damit unlesbar waere.
+ * Deshalb tragen Rahmen und Schrift Schwarz, und Gelb markiert ausschliesslich
+ * den aktiven Zustand sowie die dekorative Linie.
  */
 
 :root {
-	--df-black: #000000;
-	--df-white: #FFFFFF;
-	--df-grey-dark: #2B2B2B;
-	--df-grey-warm: #A69485;
-	--df-steel: #65768C;
-	--df-yellow: #F2C029;
+	/* --- Farben (Design System) --- */
+	--color-black: #262626; /* Primaere Textfarbe, Navigation */
+	--color-yellow: #f2c029; /* Marken-Akzentfarbe, Buttons, Borders */
+	--color-blue: #65768c; /* Links, sekundaere Elemente */
+	--color-blue-light: #8697a6; /* Hover-States, Highlights */
+	--color-brown: #a69485; /* Footer-Hintergrund */
+	--color-white: #ffffff; /* Hintergrund, helle Flaechen */
+	--color-grey: #cccccc; /* Trennlinien, dekorative Elemente */
 
-	/* Rot ausschliesslich fuer die Brandflaeche - nicht als Bedienfarbe. */
+	/* --- Typografie (Design System) --- */
+	--font-headline: 'Archivo', sans-serif;
+	--font-body: 'Source Sans Pro', sans-serif;
+	--font-weight-regular: 400;
+	--font-weight-bold: 700;
+
+	/* --- Abstaende und Rahmen (Design System) --- */
+	--spacing-xs: 10px;
+	--spacing-sm: 15px;
+	--spacing-md: 30px;
+	--border-width-btn: 3px;
+	--border-width-deco: 4px;
+	--shadow-card: 2px 2px 2px 1px rgba(0, 0, 0, 0.4);
+
+	/* --- Anwendungsspezifisch, nicht Teil des Design Systems --- */
+	/* Rot ausschliesslich fuer die Brandflaeche, nie als Bedienfarbe. */
 	--fire-red: #BE1313;
-
-	--border: 1px solid var(--df-black);
-	--shadow: 0 2px 12px rgba(0, 0, 0, 0.14);
+	--map-backdrop: #EFEDEA;
+	--code-backdrop: #F5F3F0;
+	--panel-hover: #F7F5F2;
+	--border: 1px solid var(--color-black);
+	--shadow: var(--shadow-card);
 	--gutter: 16px;
 }
 
@@ -34,9 +60,9 @@ body {
 	margin: 0;
 	padding: 0;
 	height: 100%;
-	background: var(--df-white);
-	color: var(--df-black);
-	font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+	background: var(--color-white);
+	color: var(--color-black);
+	font-family: var(--font-body), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 	font-size: 15px;
 	line-height: 1.5;
 	-webkit-font-smoothing: antialiased;
@@ -45,19 +71,19 @@ body {
 h1,
 h2,
 h3 {
-	font-family: 'Archivo', 'Source Sans 3', sans-serif;
+	font-family: var(--font-headline);
 	margin: 0;
 }
 
 a {
-	color: var(--df-black);
+	color: var(--color-black);
 	text-decoration: underline;
 	text-decoration-thickness: 1px;
 	text-underline-offset: 2px;
 }
 
 a:hover {
-	text-decoration-color: var(--df-yellow);
+	text-decoration-color: var(--color-yellow);
 	text-decoration-thickness: 3px;
 }
 
@@ -70,8 +96,8 @@ header {
 	right: 0;
 	height: 56px;
 	z-index: 900;
-	background: var(--df-white);
-	border-bottom: 2px solid var(--df-black);
+	background: var(--color-white);
+	border-bottom: 2px solid var(--color-black);
 	display: flex;
 	align-items: center;
 	padding: 0 var(--gutter);
@@ -86,7 +112,7 @@ header::after {
 	bottom: -2px;
 	width: 120px;
 	height: 2px;
-	background: var(--df-yellow);
+	background: var(--color-yellow);
 }
 
 header .brand {
@@ -106,13 +132,13 @@ header .brand img {
 header .brand .slash {
 	width: 2px;
 	height: 24px;
-	background: var(--df-black);
+	background: var(--color-black);
 	transform: rotate(20deg);
 }
 
 header h1 {
 	font-size: 17px;
-	font-weight: 700;
+	font-weight: var(--font-weight-bold);
 	letter-spacing: 0.02em;
 	text-transform: uppercase;
 	white-space: nowrap;
@@ -120,8 +146,13 @@ header h1 {
 	text-overflow: ellipsis;
 }
 
+/* Archivo liegt nur im Schnitt 700 vor, ein staerkeres Gewicht liesse der
+ * Browser kuenstlich fetten. Das Schluesselwort wird daher nicht ueber die
+ * Strichstaerke hervorgehoben, sondern mit der dekorativen Linie des Design
+ * Systems unterstrichen. */
 header h1 .subject {
-	font-weight: 800;
+	border-bottom: var(--border-width-deco) solid var(--color-yellow);
+	padding-bottom: 1px;
 }
 
 nav#nav {
@@ -141,16 +172,16 @@ nav#nav a {
 	display: inline-block;
 	padding: 5px 11px;
 	font-size: 13px;
-	font-weight: 600;
+	font-weight: var(--font-weight-bold);
 	text-decoration: none;
 	border: var(--border);
-	background: var(--df-white);
-	color: var(--df-black);
+	background: var(--color-white);
+	color: var(--color-black);
 	white-space: nowrap;
 }
 
 nav#nav a:hover {
-	background: var(--df-yellow);
+	background: var(--color-yellow);
 }
 
 /* ---------- Karte ---------- */
@@ -171,7 +202,7 @@ nav#nav a:hover {
 #map {
 	position: absolute;
 	inset: 0;
-	background: #EFEDEA;
+	background: var(--map-backdrop);
 }
 
 #map.map-error {
@@ -180,7 +211,7 @@ nav#nav a:hover {
 	justify-content: center;
 	padding: 40px;
 	text-align: center;
-	font-weight: 600;
+	font-weight: var(--font-weight-bold);
 }
 
 /* ---------- Zustandsanzeige unten links ---------- */
@@ -190,17 +221,17 @@ nav#nav a:hover {
 	left: var(--gutter);
 	bottom: var(--gutter);
 	z-index: 700;
-	background: var(--df-white);
-	border: 2px solid var(--df-black);
+	background: var(--color-white);
+	border: 2px solid var(--color-black);
 	box-shadow: var(--shadow);
 	padding: 12px 14px 10px;
 	min-width: 232px;
 }
 
 #map-size {
-	font-family: 'Archivo', sans-serif;
+	font-family: var(--font-headline);
 	font-size: 25px;
-	font-weight: 800;
+	font-weight: var(--font-weight-bold);
 	line-height: 1.15;
 	letter-spacing: -0.01em;
 	font-variant-numeric: tabular-nums;
@@ -208,8 +239,8 @@ nav#nav a:hover {
 
 #map-date {
 	font-size: 13px;
-	font-weight: 600;
-	color: var(--df-grey-dark);
+	font-weight: var(--font-weight-bold);
+	color: var(--color-blue);
 	font-variant-numeric: tabular-nums;
 	margin-top: 2px;
 }
@@ -217,25 +248,25 @@ nav#nav a:hover {
 #fire-caption {
 	margin-top: 8px;
 	padding-top: 8px;
-	border-top: 1px solid var(--df-grey-warm);
+	border-top: 1px solid var(--color-grey);
 	font-size: 12px;
-	color: var(--df-grey-dark);
+	color: var(--color-blue);
 }
 
 #fire-region {
 	display: block;
-	font-weight: 600;
+	font-weight: var(--font-weight-bold);
 }
 
 #fire-status {
 	display: block;
-	color: var(--df-steel);
+	color: var(--color-blue);
 }
 
 #map-throbber {
 	height: 4px;
-	background: #E4E0DB;
-	margin: 10px 0 0;
+	background: var(--color-grey);
+	margin: var(--spacing-xs) 0 0;
 }
 
 #map-throbber-bar {
@@ -258,24 +289,24 @@ nav#nav a:hover {
 	height: 44px;
 	padding: 0 20px 0 17px;
 	border-radius: 22px;
-	background: var(--df-white);
-	border: 2px solid var(--df-black);
+	background: var(--color-white);
+	border: 2px solid var(--color-black);
 	box-shadow: var(--shadow);
 	text-decoration: none;
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	font-family: 'Archivo', sans-serif;
+	font-family: var(--font-headline);
 	font-size: 12px;
-	font-weight: 700;
+	font-weight: var(--font-weight-bold);
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
-	color: var(--df-black);
+	color: var(--color-black);
 	transition: background 120ms ease, opacity 200ms ease;
 }
 
 #map-startstop:hover {
-	background: var(--df-yellow);
+	background: var(--color-yellow);
 }
 
 /* Waehrend des Ablaufs zurueckhaltend, damit die Flaeche im Vordergrund steht. */
@@ -291,7 +322,7 @@ nav#nav a:hover {
 	display: block;
 	width: 0;
 	height: 0;
-	border-left: 14px solid var(--df-black);
+	border-left: 14px solid var(--color-black);
 	border-top: 9px solid transparent;
 	border-bottom: 9px solid transparent;
 }
@@ -301,8 +332,8 @@ nav#nav a:hover {
 	width: 12px;
 	height: 16px;
 	border: 0;
-	border-left: 4px solid var(--df-black);
-	border-right: 4px solid var(--df-black);
+	border-left: 4px solid var(--color-black);
+	border-right: 4px solid var(--color-black);
 }
 
 /* ---------- Auswahlblöcke rechts ---------- */
@@ -327,8 +358,8 @@ nav#nav a:hover {
 
 #map-fires,
 #map-compare {
-	background: var(--df-white);
-	border: 2px solid var(--df-black);
+	background: var(--color-white);
+	border: 2px solid var(--color-black);
 	box-shadow: var(--shadow);
 	padding: 10px 12px 12px;
 	flex: 0 0 auto;
@@ -337,11 +368,11 @@ nav#nav a:hover {
 #map-fires h2,
 #map-compare h2 {
 	font-size: 11px;
-	font-weight: 700;
+	font-weight: var(--font-weight-bold);
 	text-transform: uppercase;
 	letter-spacing: 0.09em;
 	margin-bottom: 7px;
-	color: var(--df-grey-dark);
+	color: var(--color-blue);
 }
 
 #map-fires ul,
@@ -359,28 +390,28 @@ nav#nav a:hover {
 	display: block;
 	padding: 5px 8px;
 	font-size: 13px;
-	font-weight: 600;
+	font-weight: var(--font-weight-bold);
 	text-decoration: none;
-	border: 1px solid var(--df-grey-warm);
-	background: var(--df-white);
-	color: var(--df-black);
+	border: 1px solid var(--color-grey);
+	background: var(--color-white);
+	color: var(--color-black);
 }
 
 #map-fires a:hover,
 #map-compare a:hover {
-	border-color: var(--df-black);
-	background: #F7F5F2;
+	border-color: var(--color-black);
+	background: var(--panel-hover);
 }
 
 #map-fires a.highlight {
-	background: var(--df-black);
-	border-color: var(--df-black);
-	color: var(--df-white);
+	background: var(--color-black);
+	border-color: var(--color-black);
+	color: var(--color-white);
 }
 
 #map-compare a.highlight {
-	background: var(--df-yellow);
-	border-color: var(--df-black);
+	background: var(--color-yellow);
+	border-color: var(--color-black);
 }
 
 /* ---------- Überlagerungen ---------- */
@@ -395,8 +426,8 @@ nav#nav a:hover {
 	width: min(620px, calc(100% - 32px));
 	max-height: calc(100% - 32px);
 	overflow-y: auto;
-	background: var(--df-white);
-	border: 2px solid var(--df-black);
+	background: var(--color-white);
+	border: 2px solid var(--color-black);
 	box-shadow: 0 8px 40px rgba(0, 0, 0, 0.28);
 	padding: 24px 26px;
 }
@@ -408,7 +439,7 @@ nav#nav a:hover {
 
 .overlay h2 {
 	font-size: 20px;
-	font-weight: 800;
+	font-weight: var(--font-weight-bold);
 	text-transform: uppercase;
 	letter-spacing: 0.02em;
 	margin-bottom: 10px;
@@ -416,12 +447,12 @@ nav#nav a:hover {
 
 .overlay h3 {
 	font-size: 13px;
-	font-weight: 700;
+	font-weight: var(--font-weight-bold);
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
 	margin: 20px 0 6px;
 	padding-top: 12px;
-	border-top: 1px solid var(--df-grey-warm);
+	border-top: 1px solid var(--color-grey);
 }
 
 .overlay p {
@@ -435,22 +466,31 @@ nav#nav a:hover {
 }
 
 .overlay dt {
-	font-weight: 600;
+	font-weight: var(--font-weight-bold);
 	margin-top: 8px;
 }
 
 .overlay dd {
 	margin: 0;
-	color: var(--df-grey-dark);
+	color: var(--color-blue);
 }
 
+/* Standardmaessig im Fluss, damit ein Satzzeichen nach einem Code-Schnipsel
+ * nicht in die naechste Zeile rutscht. */
 .overlay code {
+	padding: 1px 5px;
+	background: var(--code-backdrop);
+	border: 1px solid var(--color-grey);
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 0.86em;
+	white-space: nowrap;
+}
+
+/* Nur der Einbettungs-Schnipsel steht als eigener Block. */
+.overlay code.snippet {
 	display: block;
 	margin: 0 0 12px;
 	padding: 10px 12px;
-	background: #F5F3F0;
-	border: 1px solid var(--df-grey-warm);
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 	font-size: 12px;
 	word-break: break-all;
 	white-space: pre-wrap;
@@ -460,10 +500,10 @@ nav#nav a:hover {
 	display: inline-block;
 	margin-top: 6px;
 	padding: 8px 18px;
-	background: var(--df-black);
-	color: var(--df-white);
-	border: 2px solid var(--df-black);
-	font-weight: 700;
+	background: var(--color-black);
+	color: var(--color-white);
+	border: 2px solid var(--color-black);
+	font-weight: var(--font-weight-bold);
 	font-size: 13px;
 	text-transform: uppercase;
 	letter-spacing: 0.06em;
@@ -471,8 +511,8 @@ nav#nav a:hover {
 }
 
 .btn-close:hover {
-	background: var(--df-yellow);
-	color: var(--df-black);
+	background: var(--color-yellow);
+	color: var(--color-black);
 }
 
 .share-buttons ul {
@@ -484,18 +524,22 @@ nav#nav a:hover {
 	gap: 8px;
 }
 
-.share-buttons a {
+/* Bewusst auf die Liste eingegrenzt: unbegrenzt wuerde diese Regel auch den
+ * Schliessen-Knopf im selben Kasten treffen, dessen weisse Schrift dann auf
+ * weissem Grund unsichtbar wird. */
+.share-buttons ul a {
 	display: inline-block;
 	padding: 7px 14px;
 	border: var(--border);
-	background: var(--df-white);
+	background: var(--color-white);
+	color: var(--color-black);
 	font-size: 13px;
-	font-weight: 600;
+	font-weight: var(--font-weight-bold);
 	text-decoration: none;
 }
 
-.share-buttons a:hover {
-	background: var(--df-yellow);
+.share-buttons ul a:hover {
+	background: var(--color-yellow);
 }
 
 /* ---------- Eingebettete Darstellung ---------- */
@@ -543,16 +587,16 @@ html.in-frame #main {
 
 /* Leaflet-Angaben an das Erscheinungsbild anpassen. */
 .leaflet-container {
-	font-family: 'Source Sans 3', sans-serif;
-	background: #EFEDEA;
+	font-family: var(--font-body);
+	background: var(--map-backdrop);
 }
 
 .leaflet-control-attribution {
 	background: rgba(255, 255, 255, 0.9) !important;
 	font-size: 10px !important;
-	color: var(--df-grey-dark);
+	color: var(--color-blue);
 }
 
 .leaflet-bar a {
-	color: var(--df-black) !important;
+	color: var(--color-black) !important;
 }

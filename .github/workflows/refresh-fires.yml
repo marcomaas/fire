@@ -1,0 +1,118 @@
+# Holt zweimal täglich neue Brandperimeter von Copernicus und committet sie,
+# solange die Kartierung der Brände läuft.
+#
+# Warum als GitHub Action und nicht als launchd-Agent auf einem der Macs:
+# Die Rechner laufen nicht durchgehend, und ein Push in dieses Repository löst
+# die Neuveröffentlichung ohnehin von selbst aus. Damit liegt die Automatik dort,
+# wo auch das Ergebnis liegt.
+#
+# Der Ablauf prüft zuerst billig, ob überhaupt neue Aufnahmen vorliegen. Die
+# eigentlichen Geometrien wiegen bis zu 59 MB je Produkt, ein voller Lauf dauert
+# Minuten — ohne diese Vorprüfung würde die Automatik den Copernicus-Dienst
+# täglich ohne Anlass belasten.
+
+name: Brandperimeter aktualisieren
+
+on:
+  schedule:
+    # 06:40 und 16:40 UTC. Copernicus liefert Monitoring-Stände überwiegend
+    # nachts und am späten Nachmittag aus, siehe die deliveryTime-Werte der API.
+    - cron: '40 6 * * *'
+    - cron: '40 16 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Vollen Lauf erzwingen, auch ohne neue Aufnahmen'
+        type: boolean
+        default: false
+
+# Zwei gleichzeitige Läufe würden sich beim Push gegenseitig überschreiben.
+concurrency:
+  group: refresh-fires
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Abhängigkeiten installieren
+        run: pip install -r requirements.txt
+
+      - name: Prüfen, ob neue Aufnahmen vorliegen
+        id: check
+        run: |
+          set +e
+          python bin/fetch_ems.py --status | tee status.txt
+          code=${PIPESTATUS[0]}
+          set -e
+
+          {
+            echo '### Statusprüfung'
+            echo '```'
+            cat status.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "${{ inputs.force }}" = "true" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Voller Lauf erzwungen." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$code" -eq 0 ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Merken, ob überhaupt noch eine Aktivierung offen ist. Sind alle
+          # abgeschlossen, hat die Automatik ihren Zweck erfüllt.
+          if grep -q 'offen' status.txt; then
+            echo "open=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "open=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Perimeter holen
+        if: steps.check.outputs.run == 'true'
+        run: python bin/fetch_ems.py
+
+      - name: Änderungen committen
+        if: steps.check.outputs.run == 'true'
+        run: |
+          if git diff --quiet -- app/assets/data/fires.js; then
+            echo 'Datenstand unverändert, kein Commit.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add app/assets/data/fires.js
+          git commit -m 'data: Brandperimeter aktualisiert (automatisch)'
+
+          # Ein paralleler Push von Hand würde sonst zum Fehlschlag führen.
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+          echo 'Neuer Datenstand committet und gepusht.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Hinweis, wenn alle Brände abgeschlossen sind
+        if: steps.check.outputs.open == 'false'
+        run: |
+          {
+            echo '### Alle Aktivierungen abgeschlossen'
+            echo
+            echo 'Copernicus liefert für die konfigurierten Brände keine neuen Stände mehr.'
+            echo 'Der Zeitplan in dieser Datei kann jetzt entfernt oder auf neue'
+            echo 'Aktivierungen umgestellt werden — die Liste FIRES steht in'
+            echo '`bin/fetch_ems.py`.'
+          } >> "$GITHUB_STEP_SUMMARY"

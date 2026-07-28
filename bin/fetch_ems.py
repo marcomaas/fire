@@ -411,12 +411,87 @@ def build_fire(config):
     }
 
 
+def report_status(configs):
+    """Prueft je Aktivierung, ob sie noch offen ist und ob neue Staende vorliegen.
+
+    Gedacht fuer den taeglichen automatischen Lauf: die eigentlichen Geometrien
+    wiegen bis zu 59 MB je Produkt, ein voller Lauf dauert Minuten. Diese
+    Abfrage kostet nur wenige Sekunden und beantwortet die Frage, ob sich ein
+    voller Lauf ueberhaupt lohnt.
+
+    Rueckgabe 0, wenn ein voller Lauf sinnvoll ist, sonst 1.
+    """
+    known = set()
+    if OUT_FILE.exists():
+        # Bereits verarbeitete Aufnahmezeitpunkte aus der letzten Ausgabe lesen,
+        # um neue Staende zu erkennen, ohne Geometrien zu laden.
+        text = OUT_FILE.read_text(encoding="utf-8")
+        start, end = text.find("["), text.rfind("]")
+        if start > 0 and end > start:
+            try:
+                for fire in json.loads(text[start : end + 1]):
+                    for step in fire.get("steps", []):
+                        known.add((fire["slug"], step["acquired"]))
+            except json.JSONDecodeError:
+                pass
+
+    any_open = False
+    fresh_total = 0
+
+    for config in configs:
+        code = config["activation"]
+        try:
+            payload = fetch_json(f"{API}?code={code}")
+        except Exception as err:  # noqa: BLE001
+            print(f"{code}: API nicht erreichbar ({err})", file=sys.stderr)
+            # Unbekannter Zustand gilt als Grund, den vollen Lauf zu versuchen.
+            fresh_total += 1
+            any_open = True
+            continue
+
+        results = payload.get("results") or []
+        if not results:
+            print(f"{code}: keine Aktivierung gefunden", file=sys.stderr)
+            continue
+        activation = results[0]
+        closed = bool(activation.get("closed"))
+        any_open = any_open or not closed
+
+        aois = [a for a in activation.get("aois", []) if a.get("number") == config["aoi"]]
+        products = delivered_products(aois[0]) if aois else []
+        fresh = [p for p in products if (config["slug"], p["acquired"]) not in known]
+        fresh_total += len(fresh)
+
+        print(
+            f"{code}/AOI{config['aoi']:02d} {config['slug']:15s} "
+            f"{'abgeschlossen' if closed else 'offen        '} "
+            f"ausgeliefert={len(products):2d} neu={len(fresh):2d}"
+            + (f"  -> {', '.join(p['acquired'][:16] for p in fresh)}" if fresh else "")
+        )
+
+    print()
+    if fresh_total:
+        print(f"{fresh_total} neue Aufnahme(n) - voller Lauf sinnvoll.")
+        return 0
+    if any_open:
+        print("Keine neuen Aufnahmen, Kartierung laeuft aber weiter - morgen erneut pruefen.")
+        return 1
+    print("Alle Aktivierungen abgeschlossen und nichts Neues - die Automatik kann ruhen.")
+    return 1
+
+
 def main():
-    wanted = sys.argv[1:]
+    args = sys.argv[1:]
+    status_only = "--status" in args
+    wanted = [a for a in args if not a.startswith("--")]
+
     configs = [c for c in FIRES if not wanted or c["slug"] in wanted]
     if not configs:
         print(f"Unbekannter Brand. Verfuegbar: {', '.join(c['slug'] for c in FIRES)}", file=sys.stderr)
         return 1
+
+    if status_only:
+        return report_status(configs)
 
     fires = []
     for config in configs:

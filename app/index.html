@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+	<meta charset="utf-8">
+	<title>Waldbrände in Frankreich und Spanien</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+	<link rel="canonical" href="index-de.html">
+	<style>
+		body { font-family: system-ui, -apple-system, sans-serif; background: #FFFFFF; color: #000000;
+		       margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; }
+		a { color: #000000; }
+	</style>
+	<script>
+		/* Damit auch ein Aufruf des Verzeichnisses direkt in der Anwendung landet,
+		   statt eine Dateiliste zu zeigen. Der Anker wird mitgenommen. */
+		(function () {
+			var lang = (navigator.language || 'de').slice(0, 2).toLowerCase();
+			var page = lang === 'de' ? 'index-de.html' : 'index-en.html';
+			window.location.replace(page + window.location.hash);
+		})();
+	</script>
+</head>
+<body>
+	<p>
+		<a href="index-de.html">Deutsche Fassung</a> ·
+		<a href="index-en.html">English version</a>
+	</p>
+</body>
+</html>
