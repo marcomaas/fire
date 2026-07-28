@@ -1,752 +1,558 @@
+/*
+ * Waldbrand-Visualisierung - Gestaltung im Datenfreunde-Erscheinungsbild.
+ *
+ * Ersetzt das Stylesheet von 2013, das auf Bootstrap 3 und Font Awesome 3
+ * aufsetzte und die Bedienelemente in dunkle, halbtransparente Kaesten legte.
+ * Grundlage ist der Datenfreunde-Styleguide: ueberwiegend Weiss, Schwarz und
+ * Dunkelgrau fuer Text und Rahmen, Signalgelb sparsam als Akzent, Archivo fuer
+ * Ueberschriften und Source Sans fuer Lauftext. Der diagonale Slash ist das
+ * uebernommene Schluesselelement des Brandings.
+ */
+
+:root {
+	--df-black: #000000;
+	--df-white: #FFFFFF;
+	--df-grey-dark: #2B2B2B;
+	--df-grey-warm: #A69485;
+	--df-steel: #65768C;
+	--df-yellow: #F2C029;
+
+	/* Rot ausschliesslich fuer die Brandflaeche - nicht als Bedienfarbe. */
+	--fire-red: #BE1313;
+
+	--border: 1px solid var(--df-black);
+	--shadow: 0 2px 12px rgba(0, 0, 0, 0.14);
+	--gutter: 16px;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+	background: var(--df-white);
+	color: var(--df-black);
+	font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+	font-size: 15px;
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+	font-family: 'Archivo', 'Source Sans 3', sans-serif;
+	margin: 0;
+}
+
+a {
+	color: var(--df-black);
+	text-decoration: underline;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 2px;
+}
+
+a:hover {
+	text-decoration-color: var(--df-yellow);
+	text-decoration-thickness: 3px;
+}
+
+/* ---------- Kopfzeile ---------- */
 
 header {
-	
-	display: block;
 	position: fixed;
-	left: 60px;
-	top: 10px;
-	height: 50px;
-	line-height: 50px;
-	z-index: 800;
-	
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 56px;
+	z-index: 900;
+	background: var(--df-white);
+	border-bottom: 2px solid var(--df-black);
+	display: flex;
+	align-items: center;
+	padding: 0 var(--gutter);
+	gap: 12px;
 }
 
-	header h1 {
-		
-		display: block;
-		position: relative;
-		height: 50px;
-		line-height: 50px;
-		margin: 0px;
-		padding: 0px;
-		color: #fff;
-		text-shadow: 0px 0px 20px #000;
-		font-size: 36px;
-		
-	}
-	
-#nav {
-	
-	display: block;
-	position: fixed;
-	right: 20px;
-	top: 20px;
-	width: 50px;
-	min-height: 50px;
-	background-color: rgba(0,0,0,0.75);
-	border-radius: 10px;
-	z-index: 2000;
+/* Der Slash aus dem Datenfreunde-Logo als diagonaler Akzent. */
+header::after {
+	content: '';
+	position: absolute;
+	right: 0;
+	bottom: -2px;
+	width: 120px;
+	height: 2px;
+	background: var(--df-yellow);
 }
 
-	#nav ul.icons {
-		
-		display: block;
-		position: relative;
-		list-style: none;
-		width: 40px;
-		margin: 5px;
-		padding: 0px;
-		
-	}
-	
-		#nav ul.icons > li {}
+header .brand {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex: 0 0 auto;
+	text-decoration: none;
+}
 
-		 	.in-frame #switch-language {
-		 		display: none;
-		 	}
+header .brand img {
+	height: 26px;
+	width: auto;
+	display: block;
+}
 
-			#nav ul.icons > li+li {
-				
-				margin-top: 5px;
-				
-			}
+header .brand .slash {
+	width: 2px;
+	height: 24px;
+	background: var(--df-black);
+	transform: rotate(20deg);
+}
 
-			#nav ul.icons > li > a {
-				
-				display: block;
-				position: relative;
-				width: 40px;
-				height: 40px;
-				line-height: 40px;
-				text-align: center;
-				color: #eee;
-				background-color: rgba(0,0,0,0.4);
-				border-radius: 7px;
-				font-size: 24px;
-				
-			}
-			
-				#nav ul.icons > li > a:hover {
-					
-					color: #fff;
-					text-decoration: none;
-					background-color: #f30;
+header h1 {
+	font-size: 17px;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
 
-				}
-				
-				#nav ul.icons > li > a:focus,
-				#nav ul.icons > li > a:active {
-					
-					color: #fff;
-					text-decoration: none;
-					
-				}
+header h1 .subject {
+	font-weight: 800;
+}
 
-				#nav ul.icons > li > a > span {
-					
-					display: none;
-					
-				}
-	
+nav#nav {
+	margin-left: auto;
+	flex: 0 0 auto;
+}
+
+nav#nav ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	gap: 8px;
+}
+
+nav#nav a {
+	display: inline-block;
+	padding: 5px 11px;
+	font-size: 13px;
+	font-weight: 600;
+	text-decoration: none;
+	border: var(--border);
+	background: var(--df-white);
+	color: var(--df-black);
+	white-space: nowrap;
+}
+
+nav#nav a:hover {
+	background: var(--df-yellow);
+}
+
+/* ---------- Karte ---------- */
+
 #main {
-	
+	position: absolute;
+	top: 56px;
+	left: 0;
+	right: 0;
+	bottom: 0;
+}
+
+#map-container {
+	position: absolute;
+	inset: 0;
+}
+
+#map {
+	position: absolute;
+	inset: 0;
+	background: #EFEDEA;
+}
+
+#map.map-error {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 40px;
+	text-align: center;
+	font-weight: 600;
+}
+
+/* ---------- Zustandsanzeige unten links ---------- */
+
+#map-controls {
+	position: absolute;
+	left: var(--gutter);
+	bottom: var(--gutter);
+	z-index: 700;
+	background: var(--df-white);
+	border: 2px solid var(--df-black);
+	box-shadow: var(--shadow);
+	padding: 12px 14px 10px;
+	min-width: 232px;
+}
+
+#map-size {
+	font-family: 'Archivo', sans-serif;
+	font-size: 25px;
+	font-weight: 800;
+	line-height: 1.15;
+	letter-spacing: -0.01em;
+	font-variant-numeric: tabular-nums;
+}
+
+#map-date {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--df-grey-dark);
+	font-variant-numeric: tabular-nums;
+	margin-top: 2px;
+}
+
+#fire-caption {
+	margin-top: 8px;
+	padding-top: 8px;
+	border-top: 1px solid var(--df-grey-warm);
+	font-size: 12px;
+	color: var(--df-grey-dark);
+}
+
+#fire-region {
 	display: block;
-	position: fixed;
-	left: 0px;
-	right: 0px;
-	top: 0px;
-	bottom: 0px;
-	
+	font-weight: 600;
 }
 
-	#map {
-	
-		display: block;
-		position: absolute;
-		left: 0px;
-		right: 0px;
-		top: 0px;
-		bottom: 0px;
-	
-	}
-	
-	
-	#map-startstop {
-		
-		display: block;
-		position: absolute;
-		left: 50%;
-		bottom: 50%;
-		margin-left: -80px;
-		margin-bottom: -60px;
-		width: 160px;
-		height: 120px;
-		color: #fff;
-		background-color: rgba(0,0,0,0.8);
-		line-height: 120px;
-		text-align: center;
-		border-radius: 20px;
-		font-size: 70px;
-		box-shadow: 0px 0px 25px -5px rgba(0,0,0,1);
-		background-image: linear-gradient(to bottom, #444 0px, #111 100%);
-		background-repeat: repeat-x;
-		z-index: 1001;
-		
-	}
-	
-		.played #map-startstop {
-			
-			left: 20px;
-			bottom: 100px;
-			margin: 0px;
-			width: 80px;
-			height: 60px;
-			font-size: 35px;
-			line-height: 60px;
-			border-radius: 10px;
-			
-		}
-			
-		#map-startstop:hover {
-		
-			text-decoration: none;
-			background-color: #BE1313;
-			background-image: linear-gradient(to bottom, #BE1313 0px, #c00 100%);
-			background-repeat: repeat-x;
-			
-		}
-		
-		#map-startstop:active,
-		#map-startstop:focus {
-			text-decoration: none;
-		}
+#fire-status {
+	display: block;
+	color: var(--df-steel);
+}
 
-		.playing #map-startstop {
+#map-throbber {
+	height: 4px;
+	background: #E4E0DB;
+	margin: 10px 0 0;
+}
 
-			display: none;
+#map-throbber-bar {
+	height: 4px;
+	width: 0;
+	background: var(--fire-red);
+	transition: width 90ms linear;
+}
 
-		}
-		
-	#map-compare {
+/* ---------- Abspielknopf ---------- */
 
-		display: block;
-		position: absolute;
-		right: 20px;
-		bottom: 100px;
-		margin: 0px;
-		background-color: rgba(0,0,0,0.75);
-		border-radius: 10px;
-		z-index: 1000;
-		padding: 5px;
+/* Unten mittig statt in der Kartenmitte: dort verdeckte der Knopf nach dem
+ * Ablauf genau die Brandflaeche, um die es geht. */
+#map-startstop {
+	position: absolute;
+	left: 50%;
+	bottom: 26px;
+	transform: translateX(-50%);
+	z-index: 750;
+	height: 44px;
+	padding: 0 20px 0 17px;
+	border-radius: 22px;
+	background: var(--df-white);
+	border: 2px solid var(--df-black);
+	box-shadow: var(--shadow);
+	text-decoration: none;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-family: 'Archivo', sans-serif;
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--df-black);
+	transition: background 120ms ease, opacity 200ms ease;
+}
 
-	}
+#map-startstop:hover {
+	background: var(--df-yellow);
+}
 
-		#map-compare h2 {
-		
-			display: block;
-			position: relative;
-			float: left;
-			margin: 0px;
-			padding: 0px 5px;
-			height: 30px;
-			line-height: 30px;
-			font-size: 16px;
-			color: #fff;
-		
-		}
-	
-		#map-compare ul {
-			
-			display: block;
-			position: relative;
-			margin: 0px;
-			padding: 0px;
-			list-style: none;
-			float: left;
-			
-		}
+/* Waehrend des Ablaufs zurueckhaltend, damit die Flaeche im Vordergrund steht. */
+#map-container.playing #map-startstop {
+	opacity: 0.35;
+}
 
-			#map-compare ul li {
-			
-				display: block;
-				position: relative;
-				margin: 0px;
-				padding: 0px;
-				list-style: none;
-				margin-left: 5px;
-				float: left;
-			
-			}
-			
-				#map-compare ul li a {
+#map-container.playing #map-startstop:hover {
+	opacity: 1;
+}
 
-					display: block;
-					position: relative;
-					height: 30px;
-					line-height: 30px;
-					text-align: center;
-					font-size: 16px;
-					color: #fff;
-					padding: 0px 5px;
-					border-radius: 7px;
-					background-color: rgba(0,0,0,0.4);
-					border-radius: 7px;
-					text-decoration: none;
-					
-				}
+#map-startstop .glyph {
+	display: block;
+	width: 0;
+	height: 0;
+	border-left: 14px solid var(--df-black);
+	border-top: 9px solid transparent;
+	border-bottom: 9px solid transparent;
+}
 
-					#map-compare ul li a.highlight,
-					#map-compare ul li a.highlight:hover {
-					
-						text-decoration: none;
-						background-color: #BE1313;
-					
-					}
-				
-					#map-compare ul li a:hover {
-						
-						text-decoration: none;
-						background-color: rgba(64,64,64,0.4);
-						
-					}
-					
-					#map-compare ul li a:active,
-					#map-compare ul li a:focus {
-					
-						text-decoration: none;
+/* Waehrend des Ablaufs wird der Knopf zur Pause. */
+#map-container.playing #map-startstop .glyph {
+	width: 12px;
+	height: 16px;
+	border: 0;
+	border-left: 4px solid var(--df-black);
+	border-right: 4px solid var(--df-black);
+}
 
-					}
+/* ---------- Auswahlblöcke rechts ---------- */
 
-	#map-share {
-		
-		display: block;
-		position: absolute;
-		right: 20px;
-		top: 170px;
-		margin: 0px;
-		font-size: 35px;
-		background-color: rgba(0,0,0,0.75);
-		border-radius: 10px;
-		z-index: 1000;
-		padding: 5px;
-		
-	}
-		
-		.share-buttons ul {
-			
-			display: block;
-			position: relative;
-			list-style: none;
-			margin: 0px;
-			padding: 0px;
-			
-		}
-		
-			.share-buttons ul li {
-				
-				display: block;
-				position: relative;
-				
-			}
-			
-				.share-buttons ul li+li {
-					
-					margin-top: 5px;
-					
-				}
+.panel-stack {
+	position: absolute;
+	right: var(--gutter);
+	top: var(--gutter);
+	bottom: var(--gutter);
+	z-index: 700;
+	width: 186px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	overflow-y: auto;
+	pointer-events: none;
+}
 
-				.share-buttons ul li a {
+.panel-stack > * {
+	pointer-events: auto;
+}
 
-					display: block;
-					position: relative;
-					width: 40px;
-					height: 40px;
-					line-height: 40px;
-					text-align: center;
-					font-size: 30px;
-					color: #fff;
-					border-radius: 7px;
+#map-fires,
+#map-compare {
+	background: var(--df-white);
+	border: 2px solid var(--df-black);
+	box-shadow: var(--shadow);
+	padding: 10px 12px 12px;
+	flex: 0 0 auto;
+}
 
-				}
-				
-					.share-buttons ul li a span {
-					
-						display: none;
-					
-					}
-					
-					.share-buttons ul li a:hover,
-					.share-buttons ul li a:focus,
-					.share-buttons ul li a:active {
-					
-						text-decoration: none;
-					
-					}
-					
-					.share-buttons ul li a.twitter {
+#map-fires h2,
+#map-compare h2 {
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.09em;
+	margin-bottom: 7px;
+	color: var(--df-grey-dark);
+}
 
-						background-color: #00aced;
+#map-fires ul,
+#map-compare ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
 
-					}
+#map-fires a,
+#map-compare a {
+	display: block;
+	padding: 5px 8px;
+	font-size: 13px;
+	font-weight: 600;
+	text-decoration: none;
+	border: 1px solid var(--df-grey-warm);
+	background: var(--df-white);
+	color: var(--df-black);
+}
 
-					.share-buttons ul li a.twitter:hover {
+#map-fires a:hover,
+#map-compare a:hover {
+	border-color: var(--df-black);
+	background: #F7F5F2;
+}
 
-						background-color: #4bc5f2;
+#map-fires a.highlight {
+	background: var(--df-black);
+	border-color: var(--df-black);
+	color: var(--df-white);
+}
 
-					}
+#map-compare a.highlight {
+	background: var(--df-yellow);
+	border-color: var(--df-black);
+}
 
-					.share-buttons ul li a.facebook {
+/* ---------- Überlagerungen ---------- */
 
-						background-color: #3B5998;
+.overlay {
+	display: none;
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	z-index: 950;
+	width: min(620px, calc(100% - 32px));
+	max-height: calc(100% - 32px);
+	overflow-y: auto;
+	background: var(--df-white);
+	border: 2px solid var(--df-black);
+	box-shadow: 0 8px 40px rgba(0, 0, 0, 0.28);
+	padding: 24px 26px;
+}
 
-					}
+#main.show-info #info,
+#main.show-share #share {
+	display: block;
+}
 
-					.share-buttons ul li a.facebook:hover {
+.overlay h2 {
+	font-size: 20px;
+	font-weight: 800;
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+	margin-bottom: 10px;
+}
 
-						background-color: #5a73a8;
+.overlay h3 {
+	font-size: 13px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	margin: 20px 0 6px;
+	padding-top: 12px;
+	border-top: 1px solid var(--df-grey-warm);
+}
 
-					}
+.overlay p {
+	margin: 0 0 10px;
+	font-size: 14px;
+}
 
-					.share-buttons ul li a.google {
+.overlay dl {
+	margin: 0 0 10px;
+	font-size: 14px;
+}
 
-						background-color: #dd4b39;
+.overlay dt {
+	font-weight: 600;
+	margin-top: 8px;
+}
 
-					}
+.overlay dd {
+	margin: 0;
+	color: var(--df-grey-dark);
+}
 
-					.share-buttons ul li a.google:hover {
+.overlay code {
+	display: block;
+	margin: 0 0 12px;
+	padding: 10px 12px;
+	background: #F5F3F0;
+	border: 1px solid var(--df-grey-warm);
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 12px;
+	word-break: break-all;
+	white-space: pre-wrap;
+}
 
-						background-color: #e26758;
+.btn-close {
+	display: inline-block;
+	margin-top: 6px;
+	padding: 8px 18px;
+	background: var(--df-black);
+	color: var(--df-white);
+	border: 2px solid var(--df-black);
+	font-weight: 700;
+	font-size: 13px;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	text-decoration: none;
+}
 
-					}
+.btn-close:hover {
+	background: var(--df-yellow);
+	color: var(--df-black);
+}
 
-					.share-buttons ul li a.adn {
+.share-buttons ul {
+	list-style: none;
+	margin: 0 0 12px;
+	padding: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
 
-						background-color: #444;
+.share-buttons a {
+	display: inline-block;
+	padding: 7px 14px;
+	border: var(--border);
+	background: var(--df-white);
+	font-size: 13px;
+	font-weight: 600;
+	text-decoration: none;
+}
 
-					}
+.share-buttons a:hover {
+	background: var(--df-yellow);
+}
 
-					.share-buttons ul li a.adn:hover {
+/* ---------- Eingebettete Darstellung ---------- */
 
-						background-color: #555;
+html.in-frame header,
+html.in-frame nav#nav {
+	display: none;
+}
 
-					}
-	
-	#sponsor {
-		
-		display: block;
-		position: absolute;
-		right: 100px;
-		top: 10px;
-		margin: 0px;
-		z-index: 1500;
-		
-	}
-	
-		#sponsor a {
-			
-			display: block;
-			position: relative;
-			width: 181px;
-			height: 60px;
-			background: url(../img/sponsor-wetter-com.png) top left no-repeat;
-			
-		}
+html.in-frame #main {
+	top: 0;
+}
 
-			#sponsor a span {
-			
-				display: none;
-			
-			}
-	
-	#map-controls {
-		
-		display: block;
-		position: absolute;
-		left: 20px;
-		bottom: 20px;
-		right: 20px;
-		height: 60px;
-		margin: 0px;
-		background-color: rgba(0,0,0,0.75);
-		border-radius: 10px;
-		z-index: 1001;
-		
-	}
-			
-		#map-controls #map-throbber {
+/* ---------- Kleine Bildschirme ---------- */
 
-			display: block;
-			position: absolute;
-			right: 210px;
-			left: 160px;
-			top: 5px;
-			bottom: 5px;
-			color: #fff;
-			background-color: rgba(0,0,0,0.4);
-			line-height: 50px;
-			text-align: center;
-			border-radius: 7px;
-			font-size: 20px;
-			padding: 5px;
-
-		}
-		
-			#map-controls #map-throbber #map-throbber-bar {
-				
-				display: block;
-				position: relative;
-				height: 40px;
-				
-				background-color: #BE1313;
-				line-height: 50px;
-				border-radius: 4px;
-				
-			}
-		
-		#map-controls #map-date {
-
-			display: block;
-			position: absolute;
-			right: 5px;
-			top: 5px;
-			bottom: 5px;
-			width: 200px;
-			color: #fff;
-			background-color: rgba(0,0,0,0.4);
-			line-height: 50px;
-			text-align: center;
-			border-radius: 7px;
-			font-size: 18px;
-
-		}
-
-		#map-controls #map-size {
-
-			display: block;
-			position: absolute;
-			left: 5px;
-			top: 5px;
-			bottom: 5px;
-			width: 150px;
-			color: #fff;
-			background-color: rgba(0,0,0,0.4);
-			line-height: 50px;
-			text-align: center;
-			border-radius: 7px;
-			font-size: 18px;
-
-		}
-		
-	.overlay {
-		
-		display: none;
-		position: fixed;
-		left: 0px;
-		right: 0px;
-		top: 0px;
-		bottom: 0px;
-		background-color: #fff;
-		z-index: 1500;
-		padding: 5% 10% 10% 10%;
-		overflow-x: auto;
-		
-	}
-				
-		.show-info #info, .show-share #share {
-			display: block;
-		}
-
-		.show-info, .show-share {
-			z-index: 1000;
-		}
-
-		.overlay code {
-			
-			display: block;
-			color: #333333;
-			margin-bottom: 10px;
-			padding: 10px;
-			white-space: normal;
-			overflow: auto;
-			
-		}
-		
-a {
-	outline: 0 !important;
-}	
-
-/* responsive */
-
-@media screen and (max-width: 720px) { 
-
-	/* headline */
-	
-	header {
-	
-		right: 60px;
-		height: 30px;
-		
-	}
-	
+@media (max-width: 720px) {
 	header h1 {
-		
-		text-align: center;
-		line-height: 30px;
-		font-size: 25px;
-		
+		font-size: 14px;
 	}
 
-	/* controls */
-
-	#map-controls {
-		
-		display: block;
-		position: absolute;
-		left: 0px;
-		bottom: 0px;
-		right: 0px;
-		height: 40px;
-		margin: 0px;
-		border-radius: 0px;
-		
-	}
-	
-		#map-controls #map-date {
-
-			width: 140px;
-			line-height: 30px;
-			font-size: 12px;
-
-		}
-	
-		#map-controls #map-size {
-
-			width: 90px;
-			line-height: 30px;
-			font-size: 12px;
-
-		}
-	
-		#map-controls #map-throbber {
-
-			right: 150px;
-			left: 100px;
-			line-height: 30px;
-			font-size: 12px;
-
-		}
-	
-			#map-controls #map-throbber #map-throbber-bar {
-		
-				height: 20px;
-				line-height: 20px;
-		
-			}
-
-	/* compare */
-
-	#map-compare {
-
-		display: block;
-		position: absolute;
-		right: 0px;
-		bottom: 40px;
-		left: 0px;
-		border-radius: 0px;
-
-	}
-
-		#map-compare h2 {
-
-			height: 20px;
-			line-height: 20px;
-			font-size: 12px;
-
-		}
-
-				#map-compare ul li a {
-
-					height: 20px;
-					line-height: 20px;
-					font-size: 12px;
-
-				}
-
-	/* nav */
-	
-	#nav {
-
-		right: 0px;
-		top: 0px;
-		width: 40px;
-		min-height: 40px;
-		border-radius: 0px 0px 0px 10px;
-
-	}
-
-		#nav ul.icons {
-
-			width: 30px;
-
-		}
-
-			#nav ul.icons > li > a {
-
-				width: 30px;
-				height: 30px;
-				line-height: 30px;
-				border-radius: 7px;
-				font-size: 20px;
-
-			}
-
-	/* share */
-	
-	#map-share {
-		
-		right: 0px;
-		top: 120px;
+	.panel-stack {
+		right: 8px;
+		top: 8px;
+		width: 148px;
 		bottom: auto;
-		width: 40px;
-		border-radius: 10px 0px 0px 10px;
-		
+		max-height: calc(100% - 130px);
 	}
-		
-		.share-buttons ul li a {
-
-			width: 30px;
-			height: 30px;
-			line-height: 30px;
-			font-size: 20px;
-
-		}
-		
-	/* sponsor */
-	
-	#sponsor {
-		
-		display: block;
-		position: absolute;
-		right: 50px;
-		top: auto;
-		bottom: 80px;
-		margin: 0px;
-		z-index: 1500;
-		
-	}
-	
-		#sponsor a {
-			
-			width: 90px;
-			height: 30px;
-			background-size: 100%;
-			
-		}
-	
-}
-
-
-@media screen and (min-width: 721px) and (max-height: 500px) { 
-
-	#map-compare {
-
-		right: 90px;
-		
-	}
-
-}
-
-@media screen and (min-width: 721px) and (max-height: 450px) { 
 
 	#map-controls {
-
-		right: 90px;
-		
+		left: 8px;
+		right: 8px;
+		bottom: 8px;
+		min-width: 0;
 	}
 
-}
-
-@media screen and (max-height: 350px) { 
-
-	#map-compare,
-	#map-controls {
-
-		right: 40px;
-		
+	#map-size {
+		font-size: 21px;
 	}
-
-	#map-share {
-
-		top: auto;
-		bottom: 0px;
-		
-	}
-
 
 	#map-startstop {
-		
-		margin-left: -40px;
-		margin-bottom: -10px;
-		width: 80px;
-		height: 60px;
-		font-size: 35px;
-		line-height: 60px;
-		border-radius: 10px;
-		
+		width: 62px;
+		height: 62px;
 	}
-
 }
 
-.in-frame #sponsor {
-	display: none !important;
+/* Leaflet-Angaben an das Erscheinungsbild anpassen. */
+.leaflet-container {
+	font-family: 'Source Sans 3', sans-serif;
+	background: #EFEDEA;
+}
+
+.leaflet-control-attribution {
+	background: rgba(255, 255, 255, 0.9) !important;
+	font-size: 10px !important;
+	color: var(--df-grey-dark);
+}
+
+.leaflet-bar a {
+	color: var(--df-black) !important;
 }

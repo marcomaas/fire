@@ -1,0 +1,449 @@
+#!/usr/bin/env python3
+"""Holt datierte Brandperimeter aus dem Copernicus EMS Rapid Mapping Service.
+
+Ersetzt die 2013er Node-Kette (bin/rimfire.js), die auf dem 2020 abgeschalteten
+GeoMAC-KML-Dienst der USGS aufsetzte.
+
+Quelle ist die Rapid-Mapping-Activations-API. Pro Aktivierung und Area of Interest
+liefert sie eine Serie von Produkten: eine erste Delineation und danach
+durchnummerierte Monitoring-Stände. Jeder Stand traegt den Aufnahmezeitpunkt der
+zugrunde liegenden Satellitenszene, und genau diese Serie ist es, welche die
+Morphing-Animation im Frontend braucht.
+
+Schema der API: /static/cems_rapidmapping_openapi_specs.yaml auf dem Portal.
+
+Ausgabe: app/assets/data/fires.js
+"""
+
+import json
+import math
+import sys
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+from shapely import union_all
+from shapely.geometry import shape
+from shapely.ops import unary_union
+
+API = "https://rapidmapping.emergency.copernicus.eu/backend/dashboard-api/public-activations/"
+
+ROOT = Path(__file__).resolve().parent.parent
+OUT_FILE = ROOT / "app" / "assets" / "data" / "fires.js"
+
+# Welche Braende dargestellt werden. Ein Eintrag entspricht einer Area of
+# Interest innerhalb einer EMS-Aktivierung, denn eine Aktivierung kann mehrere
+# raeumlich getrennte Braende umfassen.
+FIRES = [
+    {
+        "slug": "gironde",
+        "activation": "EMSR899",
+        "aoi": 1,
+        "name_de": "Gironde, Frankreich",
+        "name_en": "Gironde, France",
+        "region_de": "Saumos und Le Porge, westlich von Bordeaux",
+        "region_en": "Saumos and Le Porge, west of Bordeaux",
+        "timezone_label": "CEST",
+    },
+    {
+        "slug": "central-spain",
+        "activation": "EMSR900",
+        "aoi": 3,
+        "name_de": "La Atalaya, Spanien",
+        "name_en": "La Atalaya, Spain",
+        "region_de": "Zentralspanien, westlich von Madrid",
+        "region_en": "Central Spain, west of Madrid",
+        "timezone_label": "CEST",
+    },
+    {
+        "slug": "biscarrosse",
+        "activation": "EMSR902",
+        "aoi": 1,
+        "name_de": "Biscarrosse, Frankreich",
+        "name_en": "Biscarrosse, France",
+        "region_de": "Landes, sued-westliche Atlantikkueste",
+        "region_en": "Landes, south-western Atlantic coast",
+        "timezone_label": "CEST",
+    },
+]
+
+# Die Delineation-Produkte sind sehr feingliedrig (bis ueber 25.000 Teilflaechen
+# pro Stand). Der Morphing-Algorithmus im Frontend vergleicht jeden Punkt eines
+# Umrisses mit jedem Punkt des naechsten und laeuft damit quadratisch. Ohne
+# Obergrenze blockiert er den Browser, deshalb wird die Stuetzpunktzahl gedeckelt.
+MAX_VERTICES = 320
+SIMPLIFY_TOLERANCE = 0.0003  # Grad, entspricht grob 30 m
+MIN_FRAGMENT_HA = 5.0  # Streufeuer unterhalb dieser Groesse verrauschen den Umriss
+MAX_OTHER_PARTS = 250  # weitere gezeichnete Teilflaechen neben der groessten
+OTHER_VERTICES = 48
+
+# Ab diesem Anteil der groessten Teilflaeche an der Gesamtflaeche traegt eine
+# Morphing-Animation die Aussage. Darunter verteilt sich das Feuer auf viele
+# getrennte Flecken - dann waere ein Ueberblenden des groessten Umrisses
+# irrefuehrend, weil er kaum waechst, waehrend die Gesamtflaeche steigt.
+MORPH_SHARE_THRESHOLD = 0.7
+
+# Rasterfang beim Verschmelzen, in Grad. Etwa ein Meter.
+UNION_GRID_SIZE = 0.00001
+
+TIMEOUT = 120
+RETRIES = 4
+
+
+def fetch_json(url):
+    """Holt eine JSON-Antwort und wiederholt bei Netzfehlern mit Wartezeit.
+
+    Die groessten Delineation-Produkte sind mehrere Megabyte gross; unter der
+    Last einer laufenden Grosslage bricht der Server Verbindungen ab.
+    """
+    last = None
+    for attempt in range(RETRIES):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "fire-viz/2.0 (+github.com/marcomaas/fire)"})
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+                return json.load(resp)
+        except (urllib.error.URLError, TimeoutError, ConnectionError, json.JSONDecodeError) as err:
+            last = err
+            if attempt < RETRIES - 1:
+                wait = 4 * (attempt + 1)
+                print(f"      Versuch {attempt + 1} fehlgeschlagen ({err}), warte {wait}s", flush=True)
+                time.sleep(wait)
+    raise last
+
+
+def ring_area_m2(coords):
+    """Flaeche eines geschlossenen Rings auf der Kugel, nach Chamberlain/Duquette."""
+    radius = 6371008.8
+    total = 0.0
+    for i in range(len(coords) - 1):
+        lon1, lat1 = math.radians(coords[i][0]), math.radians(coords[i][1])
+        lon2, lat2 = math.radians(coords[i + 1][0]), math.radians(coords[i + 1][1])
+        total += (lon2 - lon1) * (2 + math.sin(lat1) + math.sin(lat2))
+    return abs(total * radius * radius / 2.0)
+
+
+def polygon_area_ha(geom):
+    """Flaeche eines (Multi)Polygons in Hektar, Loecher abgezogen."""
+    polys = geom.geoms if geom.geom_type == "MultiPolygon" else [geom]
+    total = 0.0
+    for poly in polys:
+        total += ring_area_m2(list(poly.exterior.coords))
+        for hole in poly.interiors:
+            total -= ring_area_m2(list(hole.coords))
+    return total / 10000.0
+
+
+def resample_ring(coords, count):
+    """Legt count Stuetzpunkte in gleichen Abstaenden auf einen geschlossenen Ring.
+
+    Der Morphing-Algorithmus im Frontend paart die Punkte zweier Umrisse
+    miteinander. Gleichmaessig verteilte Punkte sind dafuer deutlich guenstiger
+    als die Originalstuetzpunkte, die sich an detailreichen Stellen haeufen und
+    auf langen Geraden ausduennen. Kurze Ringe bleiben unveraendert.
+    """
+    if len(coords) <= 3:
+        return list(coords)
+
+    ring = list(coords)
+    if ring[0] != ring[-1]:
+        ring.append(ring[0])
+
+    # Laengenkorrektur, damit Ost-West-Abstaende nicht ueberbewertet werden.
+    scale = math.cos(math.radians(ring[0][1])) or 1.0
+
+    def dist(a, b):
+        dx = (b[0] - a[0]) * scale
+        dy = b[1] - a[1]
+        return math.hypot(dx, dy)
+
+    cumulative = [0.0]
+    for i in range(len(ring) - 1):
+        cumulative.append(cumulative[-1] + dist(ring[i], ring[i + 1]))
+    length = cumulative[-1]
+    if length <= 0:
+        return ring[: count + 1]
+    if len(ring) - 1 <= count:
+        return ring
+
+    out = []
+    step = length / count
+    index = 0
+    for k in range(count):
+        target = k * step
+        while index < len(cumulative) - 2 and cumulative[index + 1] < target:
+            index += 1
+        span = cumulative[index + 1] - cumulative[index]
+        ratio = 0.0 if span <= 0 else (target - cumulative[index]) / span
+        lon = ring[index][0] + (ring[index + 1][0] - ring[index][0]) * ratio
+        lat = ring[index][1] + (ring[index + 1][1] - ring[index][1]) * ratio
+        out.append((lon, lat))
+    out.append(out[0])
+    return out
+
+
+def delivered_products(aoi):
+    """Nur ausgelieferte Flaechenprodukte, chronologisch nach Aufnahmezeit.
+
+    Angekuendigte Produkte tragen statusCode W oder I und haben noch keine
+    Layer. Sie zu uebernehmen wuerde Luecken in die Animation reissen.
+    """
+    out = []
+    for product in aoi.get("products", []):
+        if not product.get("feasible"):
+            continue
+        if (product.get("version") or {}).get("statusCode") != "F":
+            continue
+        if product.get("type") not in ("DEL", "FEP", "GRA"):
+            continue
+        urls = [
+            layer["json"]
+            for layer in (product.get("layers") or [])
+            if layer.get("json") and "observedEventA" in layer["json"]
+        ]
+        if not urls:
+            continue
+        images = product.get("images") or [{}]
+        acquired = images[0].get("acquisitionTime")
+        if not acquired:
+            continue
+        out.append({"acquired": acquired, "url": urls[0], "product": product})
+    out.sort(key=lambda item: item["acquired"])
+    return out
+
+
+def outline(geojson):
+    """Verschmilzt alle Teilflaechen zu einem Umriss und vereinfacht ihn.
+
+    Zurueck kommt der aeussere Ring der groessten zusammenhaengenden Flaeche
+    sowie die Gesamtflaeche aller Teilflaechen. Das entspricht dem Verhalten der
+    Originalanwendung, die ebenfalls die groesste Teilflaeche animierte, waehrend
+    die Flaechenangabe das gesamte Brandgebiet auswies.
+    """
+    geoms = []
+    for feature in geojson.get("features", []):
+        if not feature.get("geometry"):
+            continue
+        geom = shape(feature["geometry"])
+        if geom.is_empty:
+            continue
+        if not geom.is_valid:
+            geom = geom.buffer(0)
+        if geom.geom_type not in ("Polygon", "MultiPolygon") or geom.is_empty:
+            continue
+        geoms.append(geom)
+
+    if not geoms:
+        return None
+
+    # Das Verschmelzen tausender Kleinstflaechen ist der teuerste Schritt des
+    # ganzen Laufs. Ein Rasterfang von etwa einem Meter beschleunigt ihn
+    # erheblich und liegt weit unter der Vereinfachungstoleranz von rund 30 m,
+    # die ohnehin darauf folgt - das Ergebnis aendert sich dadurch nicht
+    # sichtbar. Faellt der Rasterfang aus, wird ohne ihn verschmolzen.
+    try:
+        merged = union_all(geoms, grid_size=UNION_GRID_SIZE)
+        if merged.is_empty:
+            merged = unary_union(geoms)
+    except Exception:  # noqa: BLE001 - Rasterfang ist eine Optimierung, kein Muss
+        merged = unary_union(geoms)
+
+    total_ha = polygon_area_ha(merged)
+
+    parts = list(merged.geoms) if merged.geom_type == "MultiPolygon" else [merged]
+    parts = [p for p in parts if polygon_area_ha(p) >= MIN_FRAGMENT_HA] or parts
+    parts.sort(key=polygon_area_ha, reverse=True)
+    largest = parts[0]
+
+    # Erst leichtes Gläten gegen das Pixelrauschen der Kartierung, dann die
+    # Stuetzpunktzahl durch gleichmaessige Neuabtastung entlang des Umrisses
+    # setzen. Die Toleranz weiter hochzudrehen, bis die Punktzahl passt, waere
+    # der falsche Hebel: Bei diesen zerlappten Brandflaechen bleibt die
+    # Punktzahl lange hoch, waehrend die Form bereits zerstoert ist.
+    smoothed = largest.simplify(SIMPLIFY_TOLERANCE, preserve_topology=True)
+    if smoothed.is_empty:
+        smoothed = largest
+    if smoothed.geom_type == "MultiPolygon":
+        smoothed = max(smoothed.geoms, key=polygon_area_ha)
+
+    exterior = list(smoothed.exterior.coords)
+    ring_lonlat = resample_ring(exterior, MAX_VERTICES)
+
+    # Leaflet erwartet die Reihenfolge Breite, Laenge - GeoJSON liefert sie umgekehrt.
+    ring = [[round(lat, 5), round(lon, 5)] for lon, lat in ring_lonlat]
+
+    # Die uebrigen Teilflaechen werden nicht ueberblendet, aber mitgezeichnet,
+    # damit Flaechenangabe und Bild zusammenpassen. Bei stark zerstreuten
+    # Braenden tragen gerade sie den Zuwachs.
+    others = []
+    dropped_ha = 0.0
+    dropped_count = 0
+    for index, part in enumerate(parts[1:]):
+        if index >= MAX_OTHER_PARTS:
+            dropped_ha += polygon_area_ha(part)
+            dropped_count += 1
+            continue
+        simple = part.simplify(SIMPLIFY_TOLERANCE, preserve_topology=True)
+        if simple.is_empty:
+            simple = part
+        if simple.geom_type == "MultiPolygon":
+            simple = max(simple.geoms, key=polygon_area_ha)
+        coords = resample_ring(list(simple.exterior.coords), OTHER_VERTICES)
+        others.append([[round(lat, 5), round(lon, 5)] for lon, lat in coords])
+
+    largest_ha = polygon_area_ha(largest)
+    centroid = largest.centroid
+    return {
+        "ring": ring,
+        "others": others,
+        "total_ha": total_ha,
+        "largest_ha": largest_ha,
+        "largest_share": (largest_ha / total_ha) if total_ha else 1.0,
+        "parts": len(parts),
+        "fragments": len(geoms),
+        "dropped_parts": dropped_count,
+        "dropped_ha": dropped_ha,
+        "center": [round(centroid.y, 5), round(centroid.x, 5)],
+        "raw_vertices": len(exterior),
+    }
+
+
+def build_fire(config):
+    code = config["activation"]
+    print(f"[{code}/AOI{config['aoi']:02d}] {config['name_de']}", flush=True)
+
+    payload = fetch_json(f"{API}?code={code}")
+    results = payload.get("results") or []
+    if not results:
+        print("   keine Aktivierung gefunden", file=sys.stderr)
+        return None
+    activation = results[0]
+
+    aois = [a for a in activation.get("aois", []) if a.get("number") == config["aoi"]]
+    if not aois:
+        print(f"   AOI {config['aoi']} nicht vorhanden", file=sys.stderr)
+        return None
+    aoi = aois[0]
+
+    products = delivered_products(aoi)
+    if not products:
+        print("   keine ausgelieferten Flaechenprodukte", file=sys.stderr)
+        return None
+
+    steps = []
+    for item in products:
+        try:
+            geojson = fetch_json(item["url"])
+        except Exception as err:  # noqa: BLE001 - ein Ausfall darf die Serie nicht abbrechen
+            print(f"   {item['acquired']}: Download endgueltig fehlgeschlagen ({err})", file=sys.stderr)
+            continue
+
+        result = outline(geojson)
+        if not result:
+            print(f"   {item['acquired']}: keine verwertbare Geometrie", file=sys.stderr)
+            continue
+
+        product = item["product"]
+        label = f"MONIT{product['monitoringNumber']}" if product.get("monitoring") else product.get("type", "DEL")
+        steps.append(
+            {
+                "acquired": item["acquired"],
+                "label": label,
+                "size_km2": round(result["total_ha"] / 100.0, 2),
+                "size_ha": round(result["total_ha"], 1),
+                "largest_ha": round(result["largest_ha"], 1),
+                "largest_share": round(result["largest_share"], 3),
+                "polygon": result["ring"],
+                "others": result["others"],
+                "center": result["center"],
+            }
+        )
+        print(
+            f"   {item['acquired'][:16]}  {label:8s} "
+            f"{result['total_ha']:>9,.0f} ha  "
+            f"groesste={result['largest_ha']:>9,.0f} ha ({result['largest_share'] * 100:>4.0f}%)  "
+            f"Teile={result['parts']:>5d}  "
+            f"Stuetzpunkte={len(result['ring']):>4d} (roh {result['raw_vertices']})",
+            flush=True,
+        )
+        if result["dropped_parts"]:
+            print(
+                f"      nicht gezeichnet: {result['dropped_parts']} Kleinstflaechen "
+                f"mit zusammen {result['dropped_ha']:,.0f} ha "
+                f"({result['dropped_ha'] / result['total_ha'] * 100:.1f}% der Gesamtflaeche)",
+                file=sys.stderr,
+            )
+
+    if len(steps) < 2:
+        print(f"   nur {len(steps)} Zeitschnitt(e) - reicht nicht fuer eine Animation", file=sys.stderr)
+
+    if not steps:
+        return None
+
+    # Kartenmittelpunkt aus dem letzten, groessten Stand.
+    center = steps[-1]["center"]
+
+    # Darstellungsmodus aus der Datenlage ableiten, nicht vorgeben. Dominiert
+    # eine zusammenhaengende Flaeche, traegt das Ueberblenden der Umrisse die
+    # Aussage. Zerfaellt der Brand in viele Flecken, wird stattdessen zwischen
+    # den vollstaendigen Zustaenden gewechselt - sonst stuende der ueberblendete
+    # Umriss fast still, waehrend die Flaechenangabe sich vervielfacht.
+    min_share = min(step["largest_share"] for step in steps)
+    mode = "morph" if min_share >= MORPH_SHARE_THRESHOLD else "crossfade"
+    print(
+        f"   Modus: {mode} (kleinster Anteil der groessten Teilflaeche: {min_share * 100:.0f}%)",
+        flush=True,
+    )
+
+    return {
+        "slug": config["slug"],
+        "activation": code,
+        "aoi": config["aoi"],
+        "mode": mode,
+        "name": {"de": config["name_de"], "en": config["name_en"]},
+        "region": {"de": config["region_de"], "en": config["region_en"]},
+        "timezone_label": config["timezone_label"],
+        "event_time": activation.get("eventTime"),
+        "closed": activation.get("closed"),
+        "source_url": f"https://mapping.emergency.copernicus.eu/activations/{code}/",
+        "center": center,
+        "steps": steps,
+    }
+
+
+def main():
+    wanted = sys.argv[1:]
+    configs = [c for c in FIRES if not wanted or c["slug"] in wanted]
+    if not configs:
+        print(f"Unbekannter Brand. Verfuegbar: {', '.join(c['slug'] for c in FIRES)}", file=sys.stderr)
+        return 1
+
+    fires = []
+    for config in configs:
+        try:
+            fire = build_fire(config)
+        except (urllib.error.URLError, TimeoutError) as err:
+            print(f"   API nicht erreichbar: {err}", file=sys.stderr)
+            continue
+        if fire:
+            fires.append(fire)
+
+    if not fires:
+        print("Keine Daten geholt - Ausgabe unveraendert gelassen.", file=sys.stderr)
+        return 1
+
+    OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    OUT_FILE.write_text(
+        "/* Erzeugt von bin/fetch_ems.py - nicht von Hand bearbeiten. */\n"
+        "var _fires = " + json.dumps(fires, ensure_ascii=False, separators=(",", ":")) + ";\n",
+        encoding="utf-8",
+    )
+
+    total_steps = sum(len(f["steps"]) for f in fires)
+    size_kb = OUT_FILE.stat().st_size / 1024
+    print(f"\n{OUT_FILE.relative_to(ROOT)}: {len(fires)} Braende, {total_steps} Zeitschnitte, {size_kb:.0f} KB")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

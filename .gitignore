@@ -1,7 +1,6 @@
-
+.venv/
+__pycache__/
+*.pyc
 cache
 tmp
-bin/node_modules/*
-data/rimfire.json
-app/assets/data/rimfire.js
-
+.DS_Store

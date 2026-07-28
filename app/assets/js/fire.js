@@ -1,477 +1,562 @@
-$(document).ready(function(){
-	
-	var lang = ($('html').hasClass('site-de')) ? 'de' : 'en';
-	
-	switch (lang) {
-		case 'de': 
-			var date_format = 'DD.MM.YYYY HH:mm';
-			var to_size = function(size) { return size.toFixed(2).replace(/\./g,',')+' km²' };
-		break;
-		case 'en': 
-			var date_format = 'MM/DD/YYYY HH:mm';
-			var to_size = function(size) { return Math.round(size * 247.105381).toFixed(0).replace(/\./g,',')+' ac.' };
-		break;
-	}
-	
-	var map = new L.Map('map', {
-		minZoom: 6,
-		maxZoom: 12,
-		maxBounds: new L.LatLngBounds(
-			new L.LatLng(28, -130), 
-			new L.LatLng(52, 60)
-		)
-	});
+/*
+ * Waldbrand-Visualisierung.
+ *
+ * Fassung 2026: Datenquelle ist der Copernicus Emergency Management Service.
+ * Die Originalfassung von 2013 zeigte das Rim Fire im Yosemite-Nationalpark und
+ * bezog seine Umrisse vom GeoMAC-Dienst der USGS, der 2020 abgeschaltet wurde.
+ *
+ * Erwartete Daten:
+ *   _fires   aus assets/data/fires.js   (bin/fetch_ems.py)
+ *   _cities  aus assets/data/cities.js  (bin/build_cities.py)
+ */
 
-	var tiles = new L.TileLayer('http://tilt.odcdn.de/terrain/{z}/{x}/{y}.jpg', {
-		attribution: 'Application by <a href="http://www.opendatacity.de/">OpenDataCity</a> under <a href="http://creativecommons.org/licenses/by/3.0">CC BY</a>. Map Tiles: <a href="http://creativecommons.org/licenses/by/3.0">CC BY</a> <a href="http://stamen.com">Stamen Design</a>. Map Data: <a href="http://creativecommons.org/licenses/by-sa/3.0">CC BY SA</a> <a href="http://openstreetmap.org">OpenStreetMap</a>. Fire Data: <a href="http://inciweb.nwcg.gov/">InciWeb</a>',
-		maxZoom: 18
-	});
-	
-	map.setView(new L.LatLng(37.9, -119.9), 10).addLayer(tiles);
-	
-	var keys = [];
-	var polys = {};
-	for (k in _rimfire) {
-		keys.push(k);
-		polys[k] = [];
-		$(_rimfire[k]["polygons"][0]).each(function(idx,ll){
-			polys[k].push(new L.LatLng(ll[0],ll[1]));
-		});
-	}
-	keys = keys.sort();
-	
-	var viewpolyStyle = {
-		stroke: false,
-		color: '#CC1313',
-		opacity: 0.5,
-		weight: 3,
-		fill: true,
-		fillColor: '#BE1313',
-		fillOpacity: 0.8
-	};
+$(document).ready(function () {
+  var lang = $("html").hasClass("site-de") ? "de" : "en";
 
-	var viewpoly = new L.Polygon(polys[keys[0]], viewpolyStyle);
+  /* Die Aufnahmezeitpunkte kommen laut API-Schema in UTC. Mitteleuropaeische
+   * Sommerzeit liegt zwei Stunden davor. Bewusst fest verdrahtet, weil moment
+   * hier ohne Zeitzonendatenbank eingebunden ist und alle dargestellten
+   * Braende in derselben Zone liegen. */
+  var TZ_OFFSET_HOURS = 2;
 
-	map.addLayer(viewpoly);
+  var FRAMES_PER_STEP = 40;
+  var STEP_DURATION = 2200;
 
-	var histpolyList = [];
+  /* Zahlformatierung: im Deutschen Komma als Dezimaltrennzeichen und Punkt
+   * als Tausendertrennzeichen, im Englischen umgekehrt. */
+  function num(value, decimals) {
+    var parts = value.toFixed(decimals).split(".");
+    var thousands = lang === "de" ? "." : ",";
+    var decimal = lang === "de" ? "," : ".";
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, thousands);
+    return parts.length > 1 ? parts[0] + decimal + parts[1] : parts[0];
+  }
 
-	/* set inital time */
-	$('#map-date').text(moment.unix(parseFloat(keys[0])).format(date_format)+' PST');
+  var text = {
+    de: {
+      dateFormat: "DD.MM.YYYY HH:mm",
+      tzLabel: "MESZ",
+      size: function (ha) {
+        return num(ha / 100, 2) + " km² (" + num(ha, 0) + " ha)";
+      },
+      compare: "Größenvergleich",
+      fires: "Brand wählen",
+      ongoing:
+        "Kartierung läuft weiter — der Brand ist noch nicht abgeschlossen.",
+      contained: "Die Kartierung dieses Brandes ist abgeschlossen.",
+      steps: function (n) {
+        return n === 1 ? "1 Satellitenaufnahme" : n + " Satellitenaufnahmen";
+      },
+      single:
+        "Für diesen Brand liegt bislang nur eine Aufnahme vor, die Entwicklung lässt sich noch nicht zeigen.",
+      play: "Verlauf",
+      pause: "Pause",
+      again: "Nochmal",
+    },
+    en: {
+      dateFormat: "YYYY-MM-DD HH:mm",
+      tzLabel: "CEST",
+      size: function (ha) {
+        return num(ha * 0.00386102, 2) + " sq mi (" + num(ha, 0) + " ha)";
+      },
+      compare: "Size comparison",
+      fires: "Select fire",
+      ongoing: "Mapping is ongoing — this fire is not yet closed.",
+      contained: "Mapping for this fire is complete.",
+      steps: function (n) {
+        return n === 1
+          ? "1 satellite acquisition"
+          : n + " satellite acquisitions";
+      },
+      single:
+        "Only one acquisition is available for this fire so far, so its growth cannot be shown yet.",
+      play: "Play",
+      pause: "Pause",
+      again: "Replay",
+    },
+  }[lang];
 
-	/* set inital size */
-	$('#map-size').text(to_size(parseFloat(_rimfire[keys[0]].size)));
-	
-	var morph_steps;
-	var morph_speed = 60;
-	var morph_duration = 2500;
+  function formatTime(millis) {
+    return (
+      moment.utc(millis).add(TZ_OFFSET_HOURS, "hours").format(text.dateFormat) +
+      " " +
+      text.tzLabel
+    );
+  }
 
-	/* precalculate total number of steps */
-	var total_steps = 0;
-	for (var i = 1; i < keys.length; i++) {
-		total_steps += Math.round(Math.round((keys[i] - keys[(i-1)]) / morph_speed)/50) + 1
-	}
-	var done_steps = 0;
-	
-	var morph = function(step, done_steps) {
+  if (typeof _fires === "undefined" || !_fires.length) {
+    $("#map")
+      .addClass("map-error")
+      .text("Keine Branddaten vorhanden — bin/fetch_ems.py ausführen.");
+    return;
+  }
 
-		var this_step = 0;
-		
-		morph_duration = Math.round((keys[(step+1)] - keys[step]) / morph_speed)
-		morph_steps = Math.round(morph_duration/50);
+  /* ---------- Karte ---------- */
 
-		var histpoly = new L.Polygon(polys[keys[step]], {
-				stroke: false,
-				color: '#000',
-				opacity: 0.1,
-				weight: 1,
-				fill: true,
-				fillColor: '#221100',
-				fillOpacity: 0.1*Math.exp(-0.1*step)
-			});
+  var map = new L.Map("map", {
+    minZoom: 4,
+    maxZoom: 14,
+  });
 
-		map.addLayer(histpoly);
-		histpolyList.push(histpoly);
+  /* Der frueher genutzte Kachelserver tilt.odcdn.de existiert nicht mehr.
+   * Der Reliefhintergrund von Esri kommt dem damaligen Stamen-Terrain am
+   * naechsten und braucht keinen Zugangsschluessel. */
+  new L.TileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}",
+    {
+      maxZoom: 14,
+      attribution:
+        'Brandumrisse: <a href="https://mapping.emergency.copernicus.eu/" target="_blank" rel="noopener">Copernicus EMS</a> · ' +
+        'Stadtgrenzen: <a href="https://openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> · ' +
+        'Relief: <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> · ' +
+        'Anwendung <a href="https://github.com/marcomaas/fire" target="_blank" rel="noopener">CC BY</a>, nach einer Arbeit von OpenDataCity (2013)',
+    },
+  ).addTo(map);
 
-		// console.log("duration", morph_duration, morph_steps);
-		
-		polymorph.run(_rimfire[keys[step]]["polygons"][0], _rimfire[keys[(step+1)]]["polygons"][0], morph_steps, morph_duration, function(end, pp, time){
-			this_step++;
-			done_steps++;
-			if (!pp || pp.length === 0) {
-				console.log("end");
-				return;
-			}
+  /* Ortsnamen als halbtransparente Ebene darueber, damit die Karte lesbar
+   * bleibt, ohne den Brandumriss zu verdecken. */
+  new L.TileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 14, opacity: 0.55 },
+  ).addTo(map);
 
-			/* update throbber */
-			$('#map-throbber-bar').css('width', (100 * done_steps / total_steps).toFixed(2)+'%');
-			
-			var t = Math.round(polymorph.linterpol(0, keys[step], morph_steps, keys[(step+1)], this_step));
-			var sz = Math.round(polymorph.linterpol(0, (_rimfire[keys[step]].size*100), morph_steps, (_rimfire[keys[(step+1)]].size*100), this_step));
-			
-			/* update date */
-			$('#map-date').text(moment.unix(t).format(date_format)+' PST');
+  var firePolyStyle = {
+    stroke: true,
+    color: "#8A0B0B",
+    opacity: 0.9,
+    weight: 1,
+    fill: true,
+    fillColor: "#BE1313",
+    fillOpacity: 0.75,
+  };
+  var otherPolyStyle = {
+    stroke: false,
+    fill: true,
+    fillColor: "#BE1313",
+    fillOpacity: 0.45,
+  };
+  var historyPolyStyle = {
+    stroke: false,
+    fill: true,
+    fillColor: "#221100",
+    fillOpacity: 0.12,
+  };
+  var cityStyle = {
+    stroke: true,
+    color: "#1B3A6B",
+    opacity: 1,
+    weight: 2,
+    fill: true,
+    fillColor: "#FFFFFF",
+    fillOpacity: 0.35,
+  };
 
-			/* update size */
-			var szr = (Math.round(sz)/100).toString();
-			if (szr.match(/\.[0-9]$/)) szr += "0";
-			$('#map-size').text(to_size(parseFloat(szr)));
-			
-			viewpoly.setStyle(viewpolyStyle);
-			
-			var ll = [];
-			$(pp).each(function(idx,p){
-				ll.push(new L.LatLng(p[0],p[1]));
-			});
-			viewpoly.setLatLngs(ll);
+  var firePoly = new L.Polygon([], firePolyStyle).addTo(map);
+  var otherLayer = new L.LayerGroup().addTo(map);
+  var historyLayer = new L.LayerGroup().addTo(map);
+  var cityLayer = null;
 
-			if (end && ((step+2) < keys.length)) {
-				morph((step+1), done_steps);
-			} else if (end) {
-				/* reset play button */
-				$('#map-container').removeClass('playing');
-				$('#map-container').addClass('played');
-				done_steps = 0;
-			}
-		});
-	}
-		
-	var start = function() {
-		if ($('#map-startstop').hasClass('playing')) return; // prevent double start
-		$('#map-container').addClass('playing');
-		morph(0, 0);
-		removeHistpolys();
-	}
+  var fire = null;
+  var timer = null;
+  var playing = false;
+  var activeCity = null;
 
-	var removeHistpolys = function() {
-		$(histpolyList).each(function(idx,histpoly){
-			map.removeLayer(histpoly);
-		});
-		histpolyList.length = 0;
-	}
-	
-	$('#map-startstop').click(function(evt){
-		evt.preventDefault();
-		start();
-	});
-	
-	/* menu buttons */
-	$('#button-info').click(function(evt){
-		evt.preventDefault();
-		if ($('#main').hasClass('show-info')) {
-			$('#main').removeClass('show-info');
-		} else {
-			$('#main').attr('class', 'show-info');
-		}
-	});
+  /* ---------- Groessenvergleich ---------- */
 
-	$('#button-share').click(function(evt){
-		evt.preventDefault();
-		if ($('#main').hasClass('show-share')) {
-			$('#main').removeClass('show-share');
-		} else {
-			$('#main').attr('class', 'show-share');
-		}
-	});
-	
-	/* load park boundaries with geojson */
-	$.getJSON('assets/data/yosemite.geo.json', function(data){
-		L.geoJson(data, {
-			style: function(f){
-				return {
-					stroke: true,
-					color: '#260',
-					opacity: 1,
-					weight: 2,
-					dashArray: '10,5',
-					fill: true,
-					fillColor: '#260',
-					fillOpacity: 0.3
-				}
-			}
-		}).addTo(map);
-		viewpoly.bringToFront()
-	});
-	
-	if (window.top === window) start();
-	if (window.top !== window) $('html').addClass('in-frame');
-	
-	/* compare */
+  /* Verschiebt einen Stadtumriss an den Brandort und behaelt dabei die
+   * tatsaechliche Flaeche. Ein Laengengrad ist in hoeheren Breiten kuerzer,
+   * deshalb wird die Ost-West-Ausdehnung mit dem Verhaeltnis der
+   * Breitenkosinus korrigiert. Portiert aus bin/move.js der Fassung von 2013,
+   * wo die Verschiebung noch einmalig beim Erzeugen der Daten geschah und der
+   * Zielort fest im Code stand — bei mehreren umschaltbaren Braenden waere das
+   * je Stadt und Brand ein eigener Datensatz. */
+  function shiftRings(rings, from, to) {
+    var xScale =
+      Math.cos((from[0] * Math.PI) / 180) / Math.cos((to[0] * Math.PI) / 180);
+    var dLat = from[0] - to[0];
+    return rings.map(function (ring) {
+      return ring.map(function (point) {
+        return [point[0] - dLat, (point[1] - from[1]) * xScale + to[1]];
+      });
+    });
+  }
 
-	var comparisons = ["berlin","koeln","muenchen","manhattan","london","paris","hamburg","sacramento"];
-	var comparecity_current = null;
-	var comparecity = null;
+  function clearCity() {
+    if (cityLayer) {
+      map.removeLayer(cityLayer);
+      cityLayer = null;
+    }
+    activeCity = null;
+    $("#map-compare a").removeClass("highlight");
+    syncHash();
+  }
 
-	var compare_city = function(city) {
-		/* check if city is valid */
-		if (comparisons.indexOf(city) < 0) return;
-		if (comparecity_current === city) {
-			/* remove */
-			map.removeLayer(comparecity);
-			comparecity_current = null;
-		} else {
-			comparecity_current = city
-			$.getJSON('assets/data/'+city+'.geo.json', function(data){
-				if (comparecity) map.removeLayer(comparecity);
-				comparecity = L.geoJson(data, {
-					style: function(f){
-						return {
-							stroke: true,
-							color: '#FFF',
-							opacity: 1,
-							weight: 2,
-							fill: true,
-							fillColor: '#FFF',
-							fillOpacity: 0.3
-						}
-					}
-				}).addTo(map).on('click', function(e){
-					map.removeLayer(comparecity);
-				}).bringToFront();
-				//viewpoly.bringToFront()
-			});
-		}
-	}
-	
-	$('a', '#map-compare').click(function(evt){
-		evt.preventDefault();
-		var $b = $(this);
-		var city = $b.attr('data-city');
-		
-		if (city === comparecity_current) {
-			/* dishighlight button */
-			$b.removeClass('highlight');
-		} else {
-			/* highlight button */
-			$('a','#map-compare').removeClass('highlight');
-			$b.addClass('highlight');
-		}
-		
-		/* compare city */
-		compare_city(city);
-		
-	});
-	
-	/* share */
-	$('.share-pop').click(function(evt){
-		evt.preventDefault();
-		window.open($(this).attr('href'), "share", "width=500,height=300,status=no,scrollbars=no,resizable=no,menubar=no,toolbar=no");
-		return false;
-	});
-	
+  function showCity(slug) {
+    var city = null;
+    for (var i = 0; i < _cities.length; i++) {
+      if (_cities[i].slug === slug) city = _cities[i];
+    }
+    if (!city) return;
+    if (cityLayer) map.removeLayer(cityLayer);
+    cityLayer = new L.Polygon(
+      shiftRings(city.rings, city.center, fire.center),
+      cityStyle,
+    ).addTo(map);
+    cityLayer.on("click", clearCity);
+    activeCity = slug;
+    $("#map-compare a").removeClass("highlight");
+    $('#map-compare a[data-city="' + slug + '"]').addClass("highlight");
+    syncHash();
+  }
+
+  function buildCityButtons() {
+    if (typeof _cities === "undefined") return;
+    var list = $("#map-compare ul").empty();
+    _cities.forEach(function (city) {
+      $("<li>")
+        .append(
+          $("<a>")
+            .attr({ href: "javascript:;", "data-city": city.slug })
+            .text(city.label[lang] || city.label.de),
+        )
+        .appendTo(list);
+    });
+    $("#map-compare h2").text(text.compare);
+  }
+
+  $(document).on("click", "#map-compare a", function (evt) {
+    evt.preventDefault();
+    var slug = $(this).attr("data-city");
+    if (slug === activeCity) {
+      clearCity();
+      return;
+    }
+    showCity(slug);
+  });
+
+  /* ---------- Animation ---------- */
+
+  /* Der Anker haelt Brand und optional die Vergleichsstadt fest, damit ein
+   * bestimmter Vergleich verlinkbar ist: #gironde/bordeaux */
+  function syncHash() {
+    if (!fire) return;
+    var target = "#" + fire.slug + (activeCity ? "/" + activeCity : "");
+    if (window.location.hash !== target) {
+      window.history.replaceState(null, "", target);
+    }
+  }
+
+  function setButtonState(state) {
+    $("#map-startstop-label").text(text[state] || text.play);
+  }
+
+  function stop() {
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+    playing = false;
+    $("#map-container").removeClass("playing");
+    setButtonState("again");
+  }
+
+  function drawOthers(step) {
+    otherLayer.clearLayers();
+    (step.others || []).forEach(function (ring) {
+      otherLayer.addLayer(new L.Polygon(ring, otherPolyStyle));
+    });
+  }
+
+  function showStep(step) {
+    firePoly.setLatLngs(step.polygon);
+    drawOthers(step);
+    $("#map-date").text(formatTime(moment.utc(step.acquired).valueOf()));
+    $("#map-size").text(text.size(step.size_ha));
+  }
+
+  /* Zeit und Flaeche zwischen zwei Aufnahmen fortschreiben. Linear
+   * interpoliert und damit eine Darstellungshilfe, keine Messung — was
+   * zwischen zwei Satellitenueberfluegen genau geschah, ist nicht bekannt. */
+  function updateReadout(from, to, ratio) {
+    var t0 = moment.utc(from.acquired).valueOf();
+    var t1 = moment.utc(to.acquired).valueOf();
+    $("#map-date").text(formatTime(t0 + (t1 - t0) * ratio));
+    $("#map-size").text(
+      text.size(from.size_ha + (to.size_ha - from.size_ha) * ratio),
+    );
+  }
+
+  function finish(redrawLast) {
+    if (redrawLast) showStep(fire.steps[fire.steps.length - 1]);
+    $("#map-throbber-bar").css("width", "100%");
+    playing = false;
+    timer = null;
+    $("#map-container").removeClass("playing").addClass("played");
+    setButtonState("again");
+  }
+
+  /* Bei stark zerstreuten Braenden waechst die groesste zusammenhaengende
+   * Flaeche kaum, waehrend die Gesamtflaeche stark zunimmt — ein Ueberblenden
+   * des groessten Umrisses wuerde dort Stillstand suggerieren. Stattdessen wird
+   * jeder neue Stand vollstaendig eingeblendet und bleibt liegen; verbrannte
+   * Flaeche verschwindet ohnehin nicht wieder. Welcher Modus greift, entscheidet
+   * die Datenpipeline anhand des Flaechenanteils (Feld mode). */
+  function footprintLayer(step, fillOpacity) {
+    var group = new L.LayerGroup();
+    var style = $.extend({}, otherPolyStyle, { fillOpacity: fillOpacity });
+    group.addLayer(new L.Polygon(step.polygon, style));
+    (step.others || []).forEach(function (ring) {
+      group.addLayer(new L.Polygon(ring, style));
+    });
+    return group;
+  }
+
+  function playCrossfade() {
+    var index = 0;
+    var frames = 0;
+    var totalFrames = (fire.steps.length - 1) * FRAMES_PER_STEP;
+    var target = firePolyStyle.fillOpacity;
+
+    firePoly.setLatLngs([]);
+    otherLayer.clearLayers();
+    historyLayer.addLayer(footprintLayer(fire.steps[0], target));
+
+    function fadeStep() {
+      var from = fire.steps[index];
+      var to = fire.steps[index + 1];
+      var incoming = footprintLayer(to, 0);
+      historyLayer.addLayer(incoming);
+
+      var frameInStep = 0;
+      timer = setInterval(
+        function () {
+          frameInStep++;
+          frames++;
+
+          var ratio = Math.min(1, frameInStep / FRAMES_PER_STEP);
+          incoming.eachLayer(function (layer) {
+            layer.setStyle({ fillOpacity: target * ratio });
+          });
+
+          $("#map-throbber-bar").css(
+            "width",
+            Math.min(100, (100 * frames) / totalFrames).toFixed(2) + "%",
+          );
+          updateReadout(from, to, ratio);
+
+          if (ratio < 1) return;
+
+          clearInterval(timer);
+          timer = null;
+          index++;
+          if (index + 1 < fire.steps.length) {
+            fadeStep();
+          } else {
+            finish(false);
+          }
+        },
+        Math.round(STEP_DURATION / FRAMES_PER_STEP),
+      );
+    }
+
+    fadeStep();
+  }
+
+  function play() {
+    if (playing || !fire || fire.steps.length < 2) return;
+
+    playing = true;
+    $("#map-container").addClass("playing").removeClass("played");
+    setButtonState("pause");
+    historyLayer.clearLayers();
+
+    if (fire.mode === "crossfade") {
+      playCrossfade();
+      return;
+    }
+
+    var index = 0;
+    var frames = 0;
+    var totalFrames = (fire.steps.length - 1) * FRAMES_PER_STEP;
+
+    showStep(fire.steps[0]);
+
+    function morphStep() {
+      var from = fire.steps[index];
+      var to = fire.steps[index + 1];
+
+      /* Der erreichte Stand bleibt als blasser Schatten liegen, damit das
+       * Wachstum auch am Ende noch nachvollziehbar ist. */
+      historyLayer.addLayer(new L.Polygon(from.polygon, historyPolyStyle));
+
+      var frameInStep = 0;
+
+      timer = polymorph.run(
+        from.polygon.map(function (p) {
+          return [p[0], p[1]];
+        }),
+        to.polygon.map(function (p) {
+          return [p[0], p[1]];
+        }),
+        FRAMES_PER_STEP,
+        STEP_DURATION,
+        function (end, ring) {
+          if (!ring || !ring.length) return;
+
+          frameInStep++;
+          frames++;
+          $("#map-throbber-bar").css(
+            "width",
+            Math.min(100, (100 * frames) / totalFrames).toFixed(2) + "%",
+          );
+
+          firePoly.setLatLngs(ring);
+          updateReadout(from, to, Math.min(1, frameInStep / FRAMES_PER_STEP));
+
+          if (!end) return;
+
+          drawOthers(to);
+          index++;
+          if (index + 1 < fire.steps.length) {
+            morphStep();
+          } else {
+            finish(true);
+          }
+        },
+      );
+    }
+
+    morphStep();
+  }
+
+  /* ---------- Brand wechseln ---------- */
+
+  function selectFire(slug, citySlug) {
+    var next = null;
+    for (var i = 0; i < _fires.length; i++) {
+      if (_fires[i].slug === slug) next = _fires[i];
+    }
+    if (!next) next = _fires[0];
+
+    stop();
+    fire = next;
+
+    historyLayer.clearLayers();
+    otherLayer.clearLayers();
+    clearCity();
+    $("#map-throbber-bar").css("width", "0");
+    $("#map-container").removeClass("played");
+
+    $("#fire-name").text(fire.name[lang] || fire.name.de);
+    $("#fire-region").text(fire.region[lang] || fire.region.de);
+    $("#fire-source").attr("href", fire.source_url).text(fire.activation);
+    $("#fire-status").text(fire.closed ? text.contained : text.ongoing);
+    $("#fire-steps").text(text.steps(fire.steps.length));
+    $("#fire-note").text(fire.steps.length < 2 ? text.single : "");
+
+    $("#map-fires a").removeClass("highlight");
+    $('#map-fires a[data-fire="' + fire.slug + '"]').addClass("highlight");
+
+    /* Ausschnitt auf die letzte, groesste Ausdehnung setzen — einschliesslich
+     * der Nebenflaechen, die bei zerstreuten Braenden weit ueber die
+     * Hauptflaeche hinausreichen. */
+    var last = fire.steps[fire.steps.length - 1];
+    var bounds = new L.LatLngBounds(last.polygon);
+    (last.others || []).forEach(function (ring) {
+      bounds.extend(new L.LatLngBounds(ring));
+    });
+    map.fitBounds(bounds.pad(0.35));
+
+    showStep(fire.steps[0]);
+    setButtonState(fire.steps.length < 2 ? "again" : "play");
+
+    if (citySlug) showCity(citySlug);
+    syncHash();
+
+    play();
+  }
+
+  function buildFireButtons() {
+    var list = $("#map-fires ul").empty();
+    _fires.forEach(function (item) {
+      $("<li>")
+        .append(
+          $("<a>")
+            .attr({ href: "javascript:;", "data-fire": item.slug })
+            .text(item.name[lang] || item.name.de),
+        )
+        .appendTo(list);
+    });
+    $("#map-fires h2").text(text.fires);
+  }
+
+  $(document).on("click", "#map-fires a", function (evt) {
+    evt.preventDefault();
+    selectFire($(this).attr("data-fire"));
+  });
+
+  /* ---------- Bedienelemente ---------- */
+
+  $("#map-startstop").click(function (evt) {
+    evt.preventDefault();
+    if (playing) {
+      stop();
+    } else {
+      play();
+    }
+  });
+
+  $("#button-info").click(function (evt) {
+    evt.preventDefault();
+    $("#main").removeClass("show-share").toggleClass("show-info");
+  });
+
+  $("#button-share").click(function (evt) {
+    evt.preventDefault();
+    $("#main").removeClass("show-info").toggleClass("show-share");
+  });
+
+  $(document).on("click", ".overlay-close", function (evt) {
+    evt.preventDefault();
+    $("#main").removeClass("show-info show-share");
+  });
+
+  $(".share-pop").click(function (evt) {
+    evt.preventDefault();
+    window.open(
+      $(this).attr("href"),
+      "share",
+      "width=560,height=340,status=no,scrollbars=no,resizable=no,menubar=no,toolbar=no",
+    );
+  });
+
+  /* ---------- Start ---------- */
+
+  buildFireButtons();
+  buildCityButtons();
+
+  if (window.top !== window) $("html").addClass("in-frame");
+
+  /* Anker der Form #brand oder #brand/stadt */
+  function parseHash() {
+    var parts = window.location.hash.replace("#", "").split("/");
+    return { fire: parts[0] || _fires[0].slug, city: parts[1] || null };
+  }
+
+  var start = parseHash();
+  selectFire(start.fire, start.city);
+
+  $(window).on("hashchange", function () {
+    var target = parseHash();
+    if (!fire) return;
+    if (target.fire !== fire.slug) {
+      selectFire(target.fire, target.city);
+    } else if (target.city !== activeCity) {
+      if (target.city) {
+        showCity(target.city);
+      } else {
+        clearCity();
+      }
+    }
+  });
 });
-
-var polymorph = {
-	/* linear interpolation */
-	betterInterpol: function(p1,p2,a) {
-		return a*p2 + (1-a)*p1;
-	},
-	/* linear interpolation */
-	linterpol: function(ak,av,bk,bv,xk) {
-		var xr = (bk-xk)/(bk-ak);
-		return xr*av+(1-xr)*bv;
-	},
-	cleanUp: function (p) {
-		for (var i = 0; i < p.length; i++) {
-			p[i][0] = parseFloat(p[i][0]);
-			p[i][1] = parseFloat(p[i][1]);
-		}
-	},
-	rotate: function(p1, p2) {
-		var best1, best2, error = 1e10;
-		for (var i1 = 0; i1 < p1.length; i1++) {
-			for (var i2 = 0; i2 < p2.length; i2++) {
-				var d = distance(p1[i1], p2[i2]);
-				if (d < error) {
-					error = d;
-					best1 = i1;
-					best2 = i2;
-				}
-			}
-			if (error == 0) break;
-		}
-
-		return {
-			p1: p1.slice(best1).concat(p1.slice(0, best1)),
-			p2: p2.slice(best2).concat(p2.slice(0, best2))
-		}
-	},
-
-	reduce: function(p) {
-		var cy = 0.01;
-		var cx = cy*Math.cos(p[0][1]*3.14156/180);
-
-		var indexes = [];
-		for (var i = 0; i < p.length; i++) {
-			var xi = Math.round(p[i][0]/cx);
-			var yi = Math.round(p[i][1]/cy);
-			indexes[i] = xi+'_'+yi;
-		}
-
-		var sx = 0;
-		var sy = 0;
-		var n = 0;
-		var lastIndex = '_';
-		var np = [];
-		for (var i = 0; i < p.length; i++) {
-			if (indexes[i] != lastIndex) {
-				if (n > 0) {
-					np.push([sx/n, sy/n]);
-					sx = 0;
-					sy = 0;
-					n = 0;
-				}
-				lastIndex = indexes[i];
-			}
-			sx += p[i][0];
-			sy += p[i][1];
-			n ++;
-		}
-
-		np.push([sx/n, sy/n]);
-
-		return np;
-	},
-
-
-	/* double up array elements to average out array lengths */
-	resample: function(p1, p2) {
-
-		p1 = polymorph.reduce(p1);
-		p2 = polymorph.reduce(p2);
-
-		var temp = polymorph.rotate(p1, p2);
-
-		p1 = temp.p1;
-		p2 = temp.p2;
-
-		var max1 = p1.length-1;
-		var max2 = p2.length-1;
-
-		var a = [];
-		for (var i1 = 0; i1 <= max1; i1++) a[i1] = new Array(p2.length);
-
-		for (var i1 = 0; i1 <= max1; i1++) {
-			for (var i2 = 0; i2 <= max2; i2++) {
-				var minSum;
-				if (i1 == 0) {
-					if (i2 == 0) {
-						minSum = 0;
-					} else {
-						minSum = a[i1][i2-1];
-					}
-				} else {
-					if (i2 == 0) {
-						minSum = a[i1-1][i2];
-					} else {
-						minSum = Math.min(a[i1-1][i2], a[i1-1][i2-1], a[i1][i2-1]);
-					}
-				}
-
-				d = Math.pow(distance(p1[i1], p2[i2]), 0.3) + 1e-6;
-
-				a[i1][i2] = minSum + d;
-			}
-		}
-
-		var newp1 = [], newp2 = [];
-		var i1 = max1, i2 = max2;
-		var temp = [];
-		while ((i1 > 0) || (i2 > 0)) {
-			newp1.push(p1[i1]);
-			newp2.push(p2[i2]);
-			temp.push([i1, i2]);
-
-			if (i1 == 0) {
-				if (i2 == 0) {
-					minSum = 0; // shouldn't happend
-				} else {
-					i2--;
-				}
-			} else {
-				if (i2 == 0) {
-					i1--;
-				} else {
-					var new1 = i1, new2 = i2, minSum = a[i1][i2];
-					if (minSum > a[i1-1][i2-1]) {
-						minSum = a[i1-1][i2-1];
-						new1 = i1-1;
-						new2 = i2-1;
-					}
-					if (minSum > a[i1-1][i2]) {
-						minSum = a[i1-1][i2];
-						new1 = i1-1;
-						new2 = i2;
-					}
-					if (minSum > a[i1][i2-1]) {
-						minSum = a[i1][i2-1];
-						new1 = i1;
-						new2 = i2-1;
-					}
-					i1 = new1;
-					i2 = new2;
-				}
-			}
-		}
-		newp1.push(p1[0]);
-		newp2.push(p2[0]);
-		temp.push([0, 0]);
-
-
-		return {p1:newp1, p2:newp2};
-	},
-	/* calculate morphing steps */
-	steps: function(p1, p2, steps) {
-
-		var animation = [];
-
-		polymorph.cleanUp(p1);
-		polymorph.cleanUp(p2);
-
-
-		/* check for polygon sizes and resample if nessecary */
-		var temp = polymorph.resample(p1, p2);
-		p1 = temp.p1;
-		p2 = temp.p2;
-		
-		/* return first polygon */
-		animation.push(p1);
-
-		/* calculate interpolated polygons */
-		var pi = [];
-		for (var i = 1; i < steps; i++) {
-			var a = i/steps;
-			pi = [];
-			for (var j=0; j < p1.length; j++) {
-				pi.push([
-					polymorph.betterInterpol(p1[j][0], p2[j][0], a),
-					polymorph.betterInterpol(p1[j][1], p2[j][1], a)
-				]);
-			} 
-			animation.push(pi);
-		}
-	
-		/* return final polygon */
-		animation.push(p2);
-		
-		return animation;
-	
-	},
-
-	/* execute polymorphing animation */
-	run: function(p1, p2, steps, duration, callback) {
-		var interval = Math.round(duration/steps);
-		var animation = polymorph.steps(p1, p2, steps);
-		var timer = setInterval(function(){
-			callback((animation.length === 1), animation.shift());
-			if (animation.length === 0) clearInterval(timer);
-		}, interval);
-		return timer;
-	}
-}
-
-function distance(point1, point2) {
-	var dx = point1[0] - point2[0];
-	var dy = point1[1] - point2[1];
-	return dx*dx + dy*dy;
-}

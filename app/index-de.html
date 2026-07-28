@@ -1,128 +1,141 @@
 <!DOCTYPE html>
-<html class="site-de">
-	<head>
-		<meta charset="utf-8">
-		<title>Yosemite Rim Fire</title> 
-		<!-- viewport -->
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-		<!-- meta tags -->
-		<meta property="og:title" content="Yosemite Rim Fire">
-		<meta property="og:type" content="website">
-		<meta property="og:image" content="assets/img/preview.png">
-		<meta property="og:url" content="http://apps.opendatacity.de/fire/">
-		<meta name="description" content="Wie groß ist das Feuer im Yosemite Nationalpark?">
-		<meta name="author" content="Sebastian Vollnhals">
-		<!-- style sheets -->
-		<link rel="stylesheet" type="text/css" media="screen" href="assets/css/bootstrap.min.css">
-		<link rel="stylesheet" type="text/css" media="screen" href="assets/css/bootstrap-theme.min.css">
-		<link rel="stylesheet" type="text/css" media="screen" href="assets/css/font-awesome.min.css">
-		<link rel="stylesheet" type="text/css" media="screen" href="assets/css/leaflet.min.css">
-		<link rel="stylesheet" type="text/css" media="screen" href="assets/css/fire.css">
-		<!-- data -->
-		<script type="text/javascript" src="assets/data/rimfire.js"></script>
-		<!-- script -->
-		<script type="text/javascript" src="assets/js/jquery.min.js"></script>
-		<script type="text/javascript" src="assets/js/bootstrap.min.js"></script>
-		<script type="text/javascript" src="assets/js/leaflet.min.js"></script>
-		<script type="text/javascript" src="assets/js/moment.min.js"></script>
-		<script type="text/javascript" src="assets/js/fire.js"></script>
-		<!-- polyfills -->
-		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-		<!--[if lt IE 9]><script src="assets/js/html5shiv.min.js" type="text/javascript"></script><![endif]-->
-		<!--[if IE 8]><link rel="stylesheet" href="assets/css/leaflet.ie.css" /><![endif]-->
-		<!--[if IE 7]><link rel="stylesheet" href="assets/css/font-awesome-ie7.min.css"><![endif]-->
-	</head>
-	<body>
-		<header>
-			<h1>Yosemite Rim Fire</h1>
-		</header>
+<html class="site-de" lang="de">
+<head>
+	<meta charset="utf-8">
+	<title>Waldbrände in Frankreich und Spanien — Größenvergleich</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="description" content="Wie groß sind die Waldbrände in Frankreich und Spanien? Die Brandflächen im Größenvergleich mit europäischen Städten, im zeitlichen Verlauf aus Satellitenaufnahmen des Copernicus Emergency Management Service.">
+	<meta name="author" content="Datenfreunde">
+
+	<meta property="og:title" content="Waldbrände in Frankreich und Spanien — Größenvergleich">
+	<meta property="og:type" content="website">
+	<meta property="og:description" content="Die Brandflächen im Vergleich mit europäischen Städten, im zeitlichen Verlauf.">
+	<meta property="og:image" content="assets/img/preview.png">
+
+	<link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+	<link rel="stylesheet" href="assets/vendor/fonts/fonts.css">
+	<link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css">
+	<link rel="stylesheet" href="assets/css/fire.css">
+</head>
+<body>
+
+	<header>
+		<a class="brand" href="https://www.datenfreunde.com/" target="_blank" rel="noopener" title="Datenfreunde">
+			<img src="assets/img/df-logo.svg" alt="Datenfreunde">
+		</a>
+		<span class="slash"></span>
+		<h1><span class="subject">Waldbrände</span> in Frankreich und Spanien</h1>
 		<nav id="nav">
-			<ul class="icons">
-				<li><a id="button-info" href="javascript:;" title="Information"><i class="icon-info"></i> <span>Information</span></a></li>
-				<li><a id="button-share" href="javascript:;" title="Einbetten"><i class="icon-share"></i> <span>Einbetten</span></a></li>
-				<li id="switch-language"><a href="./en" title="Englisch">EN <span>Englische Version</span></a></li>
+			<ul>
+				<li><a id="button-info" href="javascript:;">Info &amp; Quellen</a></li>
+				<li><a id="button-share" href="javascript:;">Einbetten</a></li>
+				<li><a href="./index-en.html" title="English version">EN</a></li>
 			</ul>
 		</nav>
-		<div id="main" role="main">
-			<div id="map-container">
-				<div id="map"></div>
-				<div id="map-controls">
-					<div id="map-throbber"><div id="map-throbber-bar" style="width:0"></div></div>
-					<div id="map-size"></div>
-					<div id="map-date"></div>
-				</div>
-				<a id="map-startstop" href="javascript:;"><i class="icon-play"></i></a>
-				<div id="map-share" class="share-buttons">
-					<ul class="clearfix">
-						<li><a class="share-pop twitter" href="https://twitter.com/intent/tweet?url=http%3A%2F%2Fapps.opendatacity.de%2Ffire%2F&amp;text=Wie%20groß%20ist%20das%20Feuer%20im%20Yosemite%20Nationalpark%3F%20Ansehen%21%20%23yosemite%20%23rimfire"><i class="icon-twitter"></i><span> Twitter</span></a>
-						<li><a class="share-pop facebook" href="http://www.facebook.com/sharer/sharer.php?u=http%3A%2F%2Fapps.opendatacity.de%2Ffire%2F&amp;t=Wie%20groß%20ist%20das%20Feuer%20im%20Yosemite%20Nationalpark%3F%20Ansehen%21%20%23yosemite%20%23rimfire"><i class="icon-facebook"></i><span> Facebook</span></a>
-						<li><a class="share-pop google" href="https://plus.google.com/share?url=http%3A%2F%2Fapps.opendatacity.de%2Ffire%2F"><i class="icon-google-plus"></i><span> Google+</span></a>
-						<li><a class="share-pop adn" href="https://alpha.app.net/intent/post?text=Wie%20groß%20ist%20das%20Feuer%20im%20Yosemite%20Nationalpark%3F%20Ansehen%21%20http%3A%2F%2Fapps.opendatacity.de%2Ffire%2F%20%23yosemite%20%23rimfire"><i class="icon-adn"></i><span> App.net</span></a>
-					</ul>
+	</header>
+
+	<div id="main" role="main">
+		<div id="map-container">
+			<div id="map"></div>
+
+			<div class="panel-stack">
+				<div id="map-fires">
+					<h2>Brand wählen</h2>
+					<ul></ul>
 				</div>
 				<div id="map-compare">
 					<h2>Größenvergleich</h2>
-					<ul>
-						<li><a href="javascript:;" data-city="manhattan">Manhattan</a></li>
-						<li><a href="javascript:;" data-city="sacramento">Sacramento</a></li>
-						<!-- li><a href="javascript:;" data-city="paris">Paris</a></li -->
-						<li><a href="javascript:;" data-city="berlin">Berlin</a></li>
-						<!-- li><a href="javascript:;" data-city="hamburg">Hamburg</a></li>
-						<li><a href="javascript:;" data-city="muenchen">München</a></li>
-						<li><a href="javascript:;" data-city="koeln">Köln</a></li -->
-					</ul>
-				</div>
-				<div id="sponsor">
-					<a href="http://www.wetter.com/" rel="follow" title="wetter.com: Wetter, Wettervorhersage, Wetterbericht, Reise" target="_blank"><span>unterstützt von Wetter.com</span></a>
+					<ul></ul>
 				</div>
 			</div>
-			<div id="info" class="overlay">
-				<h2>Yosemite Rim Fire</h2>
-				<p>Die App aktualisiert sich automatisch, sobald neue Daten vorliegen.</p>
-				<p>Die Originalversion befindet sich auf: <a target="_blank" href="http://apps.opendatacity.de/fire" target="_blank">http://apps.opendatacity.de/fire</a>.</p>
-				<p>
-					Created by <a target="_blank" href="http://www.opendatacity.de" rel="follow" title="OpenDataCity">OpenDataCity</a> <a target="_blank" href="https://twitter.com/opendatacity" title="OpenDataCity at twitter.com"><i class="icon-twitter"></i></a><br />
-					Supported by <a target="_blank" href="http://www.wetter.com/" rel="follow" title="wetter.com: Wetter, Wettervorhersage, Wetterbericht, Reise">Wetter.com</a>
-				</p>
-				<h2>Lizenzen</h2>
-				<p>
-					Veröffentlicht unter <a target="_blank" href="http://creativecommons.org/licenses/by/3.0">Creative Commons Attribution 3.0</a>.
-				</p>
-				<p>
-					Code befindet sich auf <a href="https://github.com/opendatacity/fire" target="_blank">github.com/opendatacity/fire</a>.
-				</p>
-				<p>
-					Yosemite Rim Fire Geodata by <a target="_blank" href="http://inciweb.nwcg.gov/incident/3660/">US Geological Survey / InciWeb</a> (Public Domain).<br />
-					Map Data by <a target="_blank" href="http://openstreetmap.org/">OpenStreetMap</a> and Contributors, <a target="_blank" href="http://creativecommons.org/licenses/by-sa/3.0">Creative Commons Attribution-ShareAlike 3.0</a><br />
-					Map Design by <a target="_blank" href="http://stamen.com/">Stamen Design</a>, <a target="_blank" href="http://creativecommons.org/licenses/by/3.0">Creative Commons Attribution 3.0</a>
-				</p>
-				<h2>Hinweis zum Datenschutz</h2>
-				<p>
-					Diese Seite verwendet Google Analytics.
-				</p>
-				<p>
-					<a href="javascript:;" onclick="$('#main').removeClass('show-info');" class="btn btn-primary">Schließen</a>
-				</p>
+
+			<div id="map-controls">
+				<div id="map-size"></div>
+				<div id="map-date"></div>
+				<div id="fire-caption">
+					<span id="fire-region"></span>
+					<span id="fire-status"></span>
+					<span><span id="fire-steps"></span> · Copernicus <a id="fire-source" href="#" target="_blank" rel="noopener"></a></span>
+					<span id="fire-note"></span>
+				</div>
+				<div id="map-throbber">
+					<div id="map-throbber-bar"></div>
+				</div>
 			</div>
-			<div id="share" class="overlay">
-				<h2>Einbetten</h2>
-				<p>
-					Diese Browser-App steht unter <a target="_blank" href="http://creativecommons.org/licenses/by/3.0">CC-BY-Lizenz</a> und darf gerne in Blogs und anderen Medien eingebettet werden:
-				</p>
-				<code>&lt;iframe src=&quot;http://apps.opendatacity.de/fire&quot; width=&quot;540&quot; height=&quot;420&quot; scrolling=&quot;auto&quot; frameborder=&quot;0&quot;&gt;&lt;/iframe&gt;&lt;br /&gt;Ein Informationsangebot von &lt;a target=&quot;_blank&quot; href=&quot;http://www.opendatacity.de/&quot;&gt;OpenDataCity&lt;/a&gt; unterstützt von &lt;a target=&quot;_blank&quot; href=&quot;http://www.wetter.com/&quot;&gt;Wetter.com&lt;/a&gt;</code>
-				<p>
-					<a href="javascript:;" onclick="$('#main').removeClass('show-share');" class="btn btn-primary">Schließen</a>
-				</p>
-			</div>
+
+			<a id="map-startstop" href="javascript:;" title="Verlauf abspielen"><span class="glyph"></span><span id="map-startstop-label">Verlauf</span></a>
 		</div>
-		<script>
-		  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-		  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-		  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-		  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-		  ga('create', 'UA-38022006-9', 'opendatacity.de');
-		  ga('send', 'pageview');
-		</script>
-	</body>
+
+		<div id="info" class="overlay">
+			<h2>Was diese Karte zeigt</h2>
+			<p>
+				Die rote Fläche ist das kartierte Brandgebiet, wie es der
+				<a href="https://mapping.emergency.copernicus.eu/" target="_blank" rel="noopener">Copernicus Emergency Management Service</a>
+				aus Satellitenaufnahmen ausgewertet hat. Der Verlauf springt von einer Aufnahme zur nächsten und
+				zeigt so, wie sich das Feuer über die Tage ausgedehnt hat. Der weiße Umriss legt zum Vergleich
+				eine Stadt an denselben Ort — flächentreu, damit die Größenordnung unmittelbar ablesbar wird.
+			</p>
+
+			<h3>Wie die Angaben zu lesen sind</h3>
+			<dl>
+				<dt>Zeitangabe</dt>
+				<dd>Aufnahmezeitpunkt der zugrunde liegenden Satellitenszene, nicht der Zeitpunkt der Veröffentlichung.</dd>
+
+				<dt>Bewegung zwischen zwei Aufnahmen</dt>
+				<dd>Linear interpoliert. Das ist eine Darstellungshilfe: Was zwischen zwei Überflügen genau geschah, ist aus diesen Daten nicht bekannt.</dd>
+
+				<dt>Flächenangabe</dt>
+				<dd>Summe aller kartierten Teilflächen des jeweiligen Standes. Animiert wird die größte zusammenhängende Fläche, die übrigen Teilflächen liegen blasser daneben.</dd>
+
+				<dt>Städtevergleich</dt>
+				<dd>Der Umriss wird an den Brandort verschoben und dabei in seiner tatsächlichen Fläche belassen. Weil ein Längengrad in höheren Breiten kürzer ist, wird die Ost-West-Ausdehnung entsprechend korrigiert.</dd>
+			</dl>
+
+			<h3>Quellen und Lizenzen</h3>
+			<p>
+				Brandumrisse: Copernicus EMS Rapid Mapping, © Europäische Union.<br>
+				Stadtgrenzen: <a href="https://openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> und Mitwirkende, ODbL.<br>
+				Reliefkarte: <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>.
+			</p>
+			<p>
+				Diese Anwendung steht unter <a href="https://creativecommons.org/licenses/by/3.0/deed.de" target="_blank" rel="noopener">CC BY 3.0</a>.
+				Quellcode: <a href="https://github.com/marcomaas/fire" target="_blank" rel="noopener">github.com/marcomaas/fire</a>.
+			</p>
+			<p>
+				Sie beruht auf der Arbeit <em>Yosemite Rim Fire</em> von
+				<a href="https://github.com/opendatacity/fire" target="_blank" rel="noopener">OpenDataCity</a> (2013).
+				Die Überblend-Animation stammt unverändert aus jener Fassung; Datenquelle, Kartengrundlage und
+				Gestaltung wurden 2026 erneuert, weil die damaligen Dienste abgeschaltet worden sind.
+			</p>
+			<p>
+				Diese Seite bindet keine Zähldienste ein und setzt keine Cookies.
+			</p>
+			<p><a href="javascript:;" class="overlay-close btn-close">Schließen</a></p>
+		</div>
+
+		<div id="share" class="overlay share-buttons">
+			<h2>Einbetten und teilen</h2>
+			<p>
+				Diese Anwendung steht unter CC-BY-Lizenz und darf in Blogs und anderen Medien eingebettet werden:
+			</p>
+			<code>&lt;iframe src="https://marcomaas.github.io/fire/" width="640" height="480" style="border:0" title="Waldbrände in Frankreich und Spanien"&gt;&lt;/iframe&gt;</code>
+			<p>Mit einem Anker lässt sich ein bestimmter Brand direkt öffnen, etwa <code>…/fire/#gironde</code>.</p>
+			<ul>
+				<li><a class="share-pop" href="https://bsky.app/intent/compose?text=Wie%20gro%C3%9F%20sind%20die%20Waldbr%C3%A4nde%20in%20Frankreich%20und%20Spanien%3F%20https%3A%2F%2Fmarcomaas.github.io%2Ffire%2F">Bluesky</a></li>
+				<li><a class="share-pop" href="https://mastodon.social/share?text=Wie%20gro%C3%9F%20sind%20die%20Waldbr%C3%A4nde%20in%20Frankreich%20und%20Spanien%3F%20https%3A%2F%2Fmarcomaas.github.io%2Ffire%2F">Mastodon</a></li>
+				<li><a class="share-pop" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fmarcomaas.github.io%2Ffire%2F">LinkedIn</a></li>
+				<li><a class="share-pop" href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fmarcomaas.github.io%2Ffire%2F">Facebook</a></li>
+			</ul>
+			<p><a href="javascript:;" class="overlay-close btn-close">Schließen</a></p>
+		</div>
+	</div>
+
+	<script src="assets/data/fires.js"></script>
+	<script src="assets/data/cities.js"></script>
+	<script src="assets/js/jquery.min.js"></script>
+	<script src="assets/vendor/leaflet/leaflet.js"></script>
+	<script src="assets/js/moment.min.js"></script>
+	<script src="assets/js/polymorph.js"></script>
+	<script src="assets/js/fire.js"></script>
+</body>
 </html>
