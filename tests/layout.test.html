@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+	<meta charset="utf-8">
+	<title>Layout-Regressionstests</title>
+	<meta name="robots" content="noindex">
+	<style>
+		body { font-family: ui-monospace, Menlo, monospace; font-size: 13px; margin: 12px; background: #fff; color: #000; }
+		#frames { position: absolute; left: -20000px; top: 0; }
+		#frames iframe { border: 0; display: block; }
+		pre { white-space: pre-wrap; }
+		.p { color: #0a0; }
+		.f { color: #c00; font-weight: 700; }
+	</style>
+</head>
+<body>
+<h1>Layout-Regressionstests</h1>
+<pre id="results">läuft …</pre>
+<div id="frames"></div>
+
+<script>
+/*
+ * Prüft die Anwendung in echten Rahmen mehrerer Größen.
+ *
+ * Warum im Rahmen und nicht im Fenster: Headless Chrome erzwingt eine
+ * Mindestfensterbreite von 500 Pixel. Ein Lauf mit --window-size=400 rendert bei
+ * 500 und beschneidet nur das Bild — schmale Layouts lassen sich so nicht
+ * prüfen. Ein iframe mit fester Breite gibt dagegen einen echten Viewport.
+ *
+ * Diese Tests entstanden aus vier tatsächlich aufgetretenen Fehlern:
+ *   1. Abspielknopf und Zustandsanzeige lagen unter 720 Pixel übereinander.
+ *   2. Die Leaflet-Herkunftsangabe umbrach und verdeckte beide.
+ *   3. Der Schließen-Knopf war weiße Schrift auf weißem Grund.
+ *   4. Die Quellen- und Lizenzangaben waren im Rahmen nicht erreichbar, weil
+ *      dort die Kopfzeile samt Info-Knopf ausgeblendet wird.
+ */
+
+var VIEWPORTS = [
+	{ name: '360x640 Telefon', w: 360, h: 640 },
+	{ name: '400x720 Hochformat', w: 400, h: 720 },
+	{ name: '500x400 flach', w: 500, h: 400 },
+	{ name: '960x540 Querformat', w: 960, h: 540 },
+	{ name: '1280x800 Vollbild', w: 1280, h: 800 }
+];
+
+var PAGES = ['../app/index-de.html', '../app/index-en.html'];
+
+/* Sichtbare Kästen, die sich nie überlagern dürfen. Der Container .panel-stack
+ * wird absichtlich nicht geprüft: er ist transparent, ohne Zeigerereignisse und
+ * reicht bauartbedingt weit nach unten — geprüft werden die Kästen darin. */
+var BOXES = [
+	'#map-controls',
+	'#map-startstop',
+	'#map-fires',
+	'#map-compare',
+	'.leaflet-control-attribution'
+];
+
+var lines = [];
+var pass = 0;
+var fail = 0;
+
+function check(label, ok, detail) {
+	if (ok) { pass++; lines.push('PASS ' + label); }
+	else { fail++; lines.push('FAIL ' + label + (detail ? ' — ' + detail : '')); }
+}
+
+function rect(el) {
+	var r = el.getBoundingClientRect();
+	return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height };
+}
+
+function overlap(a, b) {
+	/* Ein Pixel Toleranz: aneinander anliegende Kanten sind keine Überlagerung. */
+	var x = Math.min(a.r, b.r) - Math.max(a.l, b.l);
+	var y = Math.min(a.b, b.b) - Math.max(a.t, b.t);
+	return x > 1 && y > 1 ? Math.round(x) + '×' + Math.round(y) + ' px' : null;
+}
+
+function visible(el) {
+	if (!el) return false;
+	var r = rect(el);
+	var cs = getComputedStyle(el);
+	return r.w > 0 && r.h > 0 && cs.visibility !== 'hidden' && cs.display !== 'none' && parseFloat(cs.opacity) > 0.05;
+}
+
+/* Sucht die erste nicht durchsichtige Hintergrundfarbe die Elternkette hinauf.
+ * Nötig, weil ein Element mit durchsichtigem Hintergrund die Farbe des
+ * Vorfahren zeigt — genau so entstand der unsichtbare Schließen-Knopf. */
+function effectiveBackground(el, win) {
+	var node = el;
+	while (node && node !== win.document.documentElement) {
+		var bg = win.getComputedStyle(node).backgroundColor;
+		if (bg && bg !== 'transparent' && !/rgba\(\s*0,\s*0,\s*0,\s*0\s*\)/.test(bg)) return bg;
+		node = node.parentElement;
+	}
+	return 'rgb(255, 255, 255)';
+}
+
+function rgb(str) {
+	var m = String(str).match(/(\d+(?:\.\d+)?)/g);
+	return m ? m.slice(0, 3).map(Number) : null;
+}
+
+/* Grobe Helligkeitsdifferenz. Kein Ersatz für eine Kontrastmessung nach WCAG,
+ * aber ausreichend, um Schrift zu finden, die auf ihrem Grund verschwindet. */
+function tooSimilar(fg, bg) {
+	var a = rgb(fg), b = rgb(bg);
+	if (!a || !b) return false;
+	var d = Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
+	return d < 40;
+}
+
+function testFrame(page, vp, win, doc) {
+	var tag = page.replace('../app/', '') + ' @ ' + vp.name;
+	var view = { l: 0, t: 0, r: vp.w, b: vp.h, w: vp.w, h: vp.h };
+
+	/* 1. Kein waagerechtes Überlaufen. Wächst ein Element über die Breite
+	 *    hinaus, rutscht alles rechts Positionierte mit hinaus. */
+	var de = doc.documentElement;
+	check(tag + ' | kein waagerechtes Überlaufen',
+		de.scrollWidth <= de.clientWidth + 1,
+		'scrollWidth ' + de.scrollWidth + ' > clientWidth ' + de.clientWidth);
+
+	/* 2. Daten geladen — sonst sind alle folgenden Prüfungen wertlos. */
+	var size = doc.getElementById('map-size');
+	check(tag + ' | Flächenangabe gefüllt', !!size && size.textContent.trim().length > 0);
+
+	/* 3. Kästen vollständig im Sichtbereich. */
+	var found = {};
+	BOXES.forEach(function (sel) {
+		var el = doc.querySelector(sel);
+		if (!visible(el)) return;
+		found[sel] = rect(el);
+		var r = found[sel];
+		check(tag + ' | ' + sel + ' im Sichtbereich',
+			r.l >= -1 && r.t >= -1 && r.r <= view.r + 1 && r.b <= view.b + 1,
+			'links ' + Math.round(r.l) + ' oben ' + Math.round(r.t) +
+			' rechts ' + Math.round(r.r) + ' unten ' + Math.round(r.b) +
+			' bei ' + vp.w + '×' + vp.h);
+	});
+
+	/* 4. Keine Überlagerung zwischen den Kästen. Das ist der Kern: genau hier
+	 *    lagen Abspielknopf, Zustandsanzeige und Herkunftsangabe übereinander. */
+	var keys = Object.keys(found);
+	for (var i = 0; i < keys.length; i++) {
+		for (var j = i + 1; j < keys.length; j++) {
+			var o = overlap(found[keys[i]], found[keys[j]]);
+			check(tag + ' | ' + keys[i] + ' überlagert ' + keys[j] + ' nicht', !o, o);
+		}
+	}
+
+	/* 5. Herkunftsangabe vorhanden und einzeilig. Umbrach sie, verdeckte sie
+	 *    die Bedienelemente. */
+	var attr = doc.querySelector('.leaflet-control-attribution');
+	check(tag + ' | Herkunftsangabe sichtbar', visible(attr));
+	if (visible(attr)) {
+		check(tag + ' | Herkunftsangabe einzeilig', rect(attr).h <= 24,
+			'Höhe ' + Math.round(rect(attr).h) + ' px');
+	}
+
+	/* 6. Quellen und Lizenz erreichbar — auch im Rahmen, wo die Kopfzeile
+	 *    ausgeblendet wird. */
+	var route = doc.querySelector('.attr-info') || doc.getElementById('button-info');
+	check(tag + ' | Route zu Quellen und Lizenz vorhanden', !!route);
+	if (route) {
+		route.click();
+		var open = doc.getElementById('main').classList.contains('show-info');
+		check(tag + ' | Info-Kasten öffnet sich', open);
+		var closer = doc.querySelector('#info .overlay-close');
+		check(tag + ' | Schließen-Knopf sichtbar', visible(closer));
+		if (closer) {
+			/* 7. Schrift darf nicht auf ihrem Grund verschwinden. */
+			var cs = win.getComputedStyle(closer);
+			var bg = effectiveBackground(closer, win);
+			check(tag + ' | Schließen-Knopf lesbar', !tooSimilar(cs.color, bg),
+				'Schrift ' + cs.color + ' auf ' + bg);
+		}
+		if (open) route.click();
+	}
+
+	/* 8. Abspielknopf beschriftet und bedienbar. */
+	var play = doc.getElementById('map-startstop');
+	check(tag + ' | Abspielknopf sichtbar', visible(play));
+	var label = doc.getElementById('map-startstop-label');
+	check(tag + ' | Abspielknopf beschriftet', !!label && label.textContent.trim().length > 0);
+
+	/* 9. Im Rahmen ist die Kopfzeile ausgeblendet — das ist gewollt, macht aber
+	 *    Prüfung 6 zur Pflicht. */
+	check(tag + ' | Rahmen erkannt', doc.documentElement.classList.contains('in-frame'));
+}
+
+function run() {
+	var host = document.getElementById('frames');
+	var jobs = [];
+
+	PAGES.forEach(function (page) {
+		VIEWPORTS.forEach(function (vp) {
+			var f = document.createElement('iframe');
+			f.width = vp.w;
+			f.height = vp.h;
+			f.src = page;
+			host.appendChild(f);
+			jobs.push({ page: page, vp: vp, frame: f });
+		});
+	});
+
+	/* Reichlich Zeit: die Anwendung setzt den Kartenausschnitt, startet die
+	 * Animation und Leaflet baut seine Bedienelemente erst danach auf. */
+	setTimeout(function () {
+		jobs.forEach(function (job) {
+			try {
+				testFrame(job.page, job.vp, job.frame.contentWindow, job.frame.contentDocument);
+			} catch (err) {
+				check(job.page + ' @ ' + job.vp.name + ' | Prüfung durchgelaufen', false, String(err));
+			}
+		});
+
+		lines.push('DONE ' + pass + ' bestanden, ' + fail + ' fehlgeschlagen');
+		document.getElementById('results').textContent = lines.join('\n');
+		document.title = fail ? 'FEHLGESCHLAGEN' : 'BESTANDEN';
+	}, 6000);
+}
+
+run();
+</script>
+</body>
+</html>
