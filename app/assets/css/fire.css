@@ -633,6 +633,14 @@ html.in-frame #main {
 		padding: 8px 9px 9px;
 	}
 
+	/* „Größenvergleich" passt mit der weiten Laufweite nicht in die schmale
+	 * Spalte und wurde abgeschnitten. */
+	#map-fires h2,
+	#map-compare h2 {
+		letter-spacing: 0.04em;
+		font-size: 10px;
+	}
+
 	#map-fires a,
 	#map-compare a {
 		padding: 4px 6px;
