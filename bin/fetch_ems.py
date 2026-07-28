@@ -66,7 +66,23 @@ FIRES = [
         "region_en": "Landes, south-western Atlantic coast",
         "timezone_label": "CEST",
     },
+    {
+        "slug": "artana",
+        "activation": "EMSR905",
+        "aoi": 1,
+        "name_de": "Artana, Spanien",
+        "name_en": "Artana, Spain",
+        "region_de": "Plana Baixa, Provinz Castellon, noerdlich von Valencia",
+        "region_en": "Plana Baixa, Castellon province, north of Valencia",
+        "timezone_label": "CEST",
+    },
 ]
+
+# Beobachtet, aber noch nicht aufgenommen: EMSR906 "Wildfires in Province of
+# Leon, Spain". Dort lag am 28.07.2026 nur ein einziges ausgeliefertes
+# Flaechenprodukt vor - fuer eine Animation braucht es mindestens zwei
+# Zeitschnitte. Sobald Copernicus nachliefert, genuegt hier ein weiterer
+# Eintrag mit activation EMSR906 und der passenden AOI-Nummer.
 
 # Die Delineation-Produkte sind sehr feingliedrig (bis ueber 25.000 Teilflaechen
 # pro Stand). Der Morphing-Algorithmus im Frontend vergleicht jeden Punkt eines
@@ -411,6 +427,119 @@ def build_fire(config):
     }
 
 
+def discover(look_back=14, miss_limit=8):
+    """Sucht neue Waldbrand-Aktivierungen, die noch nicht konfiguriert sind.
+
+    Die API hat keine Listen-Schnittstelle: der Parameter code ist Pflicht, ein
+    Aufruf ohne ihn liefert nur ein Fehlerobjekt. Deshalb wird der Nummernraum
+    abgetastet - ab look_back Nummern unterhalb der hoechsten bereits
+    konfigurierten Aktivierung aufwaerts, bis miss_limit Nummern in Folge
+    nichts liefern.
+
+    Gemeldet wird nur, was auch darstellbar ist: Kategorie Wildfire und
+    mindestens zwei ausgelieferte Flaechenprodukte in derselben Area of
+    Interest. Mit nur einem Zeitschnitt gibt es keine Entwicklung zu zeigen.
+    """
+    known_codes = {c["activation"] for c in FIRES}
+    known_pairs = {(c["activation"], c["aoi"]) for c in FIRES}
+    highest = max(int(c["activation"].removeprefix("EMSR")) for c in FIRES)
+
+    start = highest - look_back
+    print(f"Suche ab EMSR{start}, Abbruch nach {miss_limit} Fehlschlaegen in Folge.\n")
+
+    candidates = []
+    number = start
+    misses = 0
+
+    while misses < miss_limit:
+        code = f"EMSR{number}"
+        number += 1
+        try:
+            payload = fetch_json(f"{API}?code={code}")
+        except Exception as err:  # noqa: BLE001 - eine Luecke darf die Suche nicht beenden
+            print(f"{code}: nicht abrufbar ({err})", file=sys.stderr)
+            misses += 1
+            continue
+
+        results = payload.get("results") or []
+        if not results:
+            misses += 1
+            continue
+
+        misses = 0
+        activation = results[0]
+        if activation.get("category") != "Wildfire":
+            continue
+
+        countries = ", ".join(c.get("name", "?") for c in activation.get("countries", []))
+        marker = " [konfiguriert]" if code in known_codes else ""
+        print(f"{code} {activation.get('name')} ({countries}){marker}")
+
+        for aoi in activation.get("aois", []):
+            ready = delivered_products(aoi)
+            flag = ""
+            if len(ready) >= 2 and (code, aoi.get("number")) not in known_pairs:
+                flag = "  <-- darstellbar, noch nicht aufgenommen"
+                candidates.append(
+                    {
+                        "code": code,
+                        "aoi": aoi.get("number"),
+                        "aoi_name": aoi.get("name"),
+                        "name": activation.get("name"),
+                        "countries": countries,
+                        "steps": len(ready),
+                        "closed": bool(activation.get("closed")),
+                    }
+                )
+            print(f"    AOI{aoi.get('number'):02d} {str(aoi.get('name'))[:26]:28s} Zeitschnitte={len(ready)}{flag}")
+
+    print()
+    if not candidates:
+        print("Keine neuen darstellbaren Waldbraende gefunden.")
+        return 1
+
+    print(f"{len(candidates)} Kandidat(en) fuer die Liste FIRES in bin/fetch_ems.py:\n")
+    for c in candidates:
+        slug = str(c["aoi_name"] or c["code"]).lower().replace(" ", "-")
+        print(
+            "    {\n"
+            f'        "slug": "{slug}",\n'
+            f'        "activation": "{c["code"]}",\n'
+            f'        "aoi": {c["aoi"]},\n'
+            f'        "name_de": "{c["aoi_name"]}, LAND",\n'
+            f'        "name_en": "{c["aoi_name"]}, COUNTRY",\n'
+            f'        "region_de": "{c["name"]} — Region ergaenzen",\n'
+            f'        "region_en": "{c["name"]} — add region",\n'
+            '        "timezone_label": "CEST",\n'
+            "    },"
+        )
+        print(
+            f"    # {c['countries']}, {c['steps']} Zeitschnitte, {'abgeschlossen' if c['closed'] else 'noch offen'}\n"
+        )
+    return 0
+
+
+def load_existing():
+    """Liest die letzte Ausgabe als dict slug -> Brand.
+
+    Dient zwei Zwecken: dem Erkennen neuer Aufnahmen ohne Download von
+    Geometrien, und dem Erhalten der uebrigen Braende, wenn nur eine Auswahl
+    neu geholt wird. Ist die Datei nicht vorhanden oder unlesbar, gilt der
+    Bestand als leer - ein voller Lauf stellt ihn dann wieder her.
+    """
+    if not OUT_FILE.exists():
+        return {}
+    text = OUT_FILE.read_text(encoding="utf-8")
+    start, end = text.find("["), text.rfind("]")
+    if start < 0 or end <= start:
+        return {}
+    try:
+        return {fire["slug"]: fire for fire in json.loads(text[start : end + 1])}
+    except (json.JSONDecodeError, KeyError, TypeError):
+        print(f"{OUT_FILE.name} nicht lesbar - Bestand gilt als leer.", file=sys.stderr)
+        return {}
+
+
 def report_status(configs):
     """Prueft je Aktivierung, ob sie noch offen ist und ob neue Staende vorliegen.
 
@@ -421,19 +550,9 @@ def report_status(configs):
 
     Rueckgabe 0, wenn ein voller Lauf sinnvoll ist, sonst 1.
     """
-    known = set()
-    if OUT_FILE.exists():
-        # Bereits verarbeitete Aufnahmezeitpunkte aus der letzten Ausgabe lesen,
-        # um neue Staende zu erkennen, ohne Geometrien zu laden.
-        text = OUT_FILE.read_text(encoding="utf-8")
-        start, end = text.find("["), text.rfind("]")
-        if start > 0 and end > start:
-            try:
-                for fire in json.loads(text[start : end + 1]):
-                    for step in fire.get("steps", []):
-                        known.add((fire["slug"], step["acquired"]))
-            except json.JSONDecodeError:
-                pass
+    # Bereits verarbeitete Aufnahmezeitpunkte aus der letzten Ausgabe lesen, um
+    # neue Staende zu erkennen, ohne Geometrien zu laden.
+    known = {(slug, step["acquired"]) for slug, fire in load_existing().items() for step in fire.get("steps", [])}
 
     any_open = False
     fresh_total = 0
@@ -483,7 +602,11 @@ def report_status(configs):
 def main():
     args = sys.argv[1:]
     status_only = "--status" in args
+    discover_only = "--discover" in args
     wanted = [a for a in args if not a.startswith("--")]
+
+    if discover_only:
+        return discover()
 
     configs = [c for c in FIRES if not wanted or c["slug"] in wanted]
     if not configs:
@@ -506,6 +629,22 @@ def main():
     if not fires:
         print("Keine Daten geholt - Ausgabe unveraendert gelassen.", file=sys.stderr)
         return 1
+
+    # Wurde nur eine Auswahl geholt, bleiben die uebrigen Braende aus der letzten
+    # Ausgabe erhalten. Ohne diesen Schritt wuerde ein Lauf fuer einen einzelnen
+    # Brand alle anderen aus der Datei loeschen - und ein voller Lauf laedt
+    # Produkte von bis zu 59 MB erneut herunter, nur um sie unveraendert zu
+    # schreiben.
+    if wanted:
+        fresh = {f["slug"]: f for f in fires}
+        merged = load_existing()
+        merged.update(fresh)
+        # Reihenfolge aus FIRES uebernehmen, damit die Auswahlknoepfe stabil bleiben.
+        order = [c["slug"] for c in FIRES]
+        fires = [merged[s] for s in order if s in merged]
+        kept = [s for s in merged if s not in fresh]
+        if kept:
+            print(f"\nUnveraendert uebernommen: {', '.join(kept)}")
 
     OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     OUT_FILE.write_text(
