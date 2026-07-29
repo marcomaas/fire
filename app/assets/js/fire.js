@@ -610,7 +610,6 @@ $(document).ready(function () {
     historyLayer.clearLayers();
     otherLayer.clearLayers();
     clearCity();
-    $("#map-throbber-bar").css("width", "0");
     $("#map-container").removeClass("played");
 
     $("#fire-name").text(fire.name[lang] || fire.name.de);
