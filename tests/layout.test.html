@@ -40,7 +40,13 @@ var VIEWPORTS = [
 	{ name: '400x720 Hochformat', w: 400, h: 720 },
 	{ name: '500x400 flach', w: 500, h: 400 },
 	{ name: '960x540 Querformat', w: 960, h: 540 },
-	{ name: '1280x800 Vollbild', w: 1280, h: 800 }
+	{ name: '1280x800 Vollbild', w: 1280, h: 800 },
+	/* Rahmen, der seine Größe erst nach dem Laden bekommt. Reproduziert den Fall,
+	 * in dem fitBounds die Zoomstufe aus einer Containergröße von null berechnet
+	 * und Leaflet auf die kleinste Stufe zurückfällt — statt des Brandes war dann
+	 * halb Europa zu sehen. Ohne diesen Fall bliebe die Zoom-Prüfung wirkungslos:
+	 * bei sofort bemaßten Rahmen tritt der Fehler nicht auf. */
+	{ name: '470x470 Größe erst nach dem Laden', w: 470, h: 470, lateSize: true }
 ];
 
 var PAGES = ['../app/index-de.html', '../app/index-en.html'];
@@ -236,10 +242,26 @@ function run() {
 	PAGES.forEach(function (page) {
 		VIEWPORTS.forEach(function (vp) {
 			var f = document.createElement('iframe');
-			f.width = vp.w;
-			f.height = vp.h;
+			if (vp.lateSize) {
+				/* Erst ohne Maße einhängen, dann verzögert bemaßen. */
+				f.width = 0;
+				f.height = 0;
+				f.style.width = '0px';
+				f.style.height = '0px';
+			} else {
+				f.width = vp.w;
+				f.height = vp.h;
+			}
 			f.src = page;
 			host.appendChild(f);
+			if (vp.lateSize) {
+				setTimeout(function () {
+					f.width = vp.w;
+					f.height = vp.h;
+					f.style.width = vp.w + 'px';
+					f.style.height = vp.h + 'px';
+				}, 1200);
+			}
 			jobs.push({ page: page, vp: vp, frame: f });
 		});
 	});
