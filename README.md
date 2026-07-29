@@ -118,8 +118,12 @@ veröffentlicht neu). Zusätzlich erreichbar über `waldbraende.vercel.app` und
 unverändert bleiben. Die Wurzel `/` zeigt dabei **unmittelbar** auf `app/index-de.html` und
 nicht auf eine Weiterleitungsseite: Vorschau-Crawler von LinkedIn, Bluesky oder Mastodon
 führen kein JavaScript aus und sahen auf der Weiterleitungsseite nur einen Titel — die
-Vorschaukarte blieb leer. `app/index.html` bleibt als Einstieg für direkte
-Verzeichnisaufrufe erhalten, etwa bei einem lokalen Server.
+Vorschaukarte blieb leer.
+
+**Wichtig dabei:** Im Wurzelverzeichnis darf keine `index.html` liegen. Vercel prüft zuerst
+das Dateisystem und erst danach die Umschreibungen — eine Datei dort gewinnt gegen die Regel
+für `/` und macht sie wirkungslos. Genau daran hing der Fehler. `app/index.html` bleibt
+erhalten, es greift nur bei direkten Verzeichnisaufrufen, etwa bei einem lokalen Server.
 
 `fires.js` bekommt `must-revalidate`, sonst verschwindet der zweimal täglich aktualisierte
 Datenstand hinter dem Cache.
