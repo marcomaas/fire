@@ -626,13 +626,17 @@ $(document).ready(function () {
     /* Ausschnitt auf die letzte, groesste Ausdehnung setzen — einschliesslich
      * der Nebenflaechen, die bei zerstreuten Braenden weit ueber die
      * Hauptflaeche hinausreichen. */
+    /* Nicht "bounds" nennen — so heißen die Grenzen des Zeitstrahls weiter
+     * oben, und eine gleichnamige lokale Variable wäre eine Falle für die
+     * nächste Änderung an dieser Funktion. */
     var last = fire.steps[fire.steps.length - 1];
-    var bounds = new L.LatLngBounds(last.polygon);
+    var viewBounds = new L.LatLngBounds(last.polygon);
     (last.others || []).forEach(function (ring) {
-      bounds.extend(new L.LatLngBounds(ring));
+      viewBounds.extend(new L.LatLngBounds(ring));
     });
-    map.fitBounds(bounds.pad(0.35));
+    map.fitBounds(viewBounds.pad(0.35));
 
+    buildTimeline(fire);
     showStep(fire.steps[0]);
     setButtonState(fire.steps.length < 2 ? "again" : "play");
 
