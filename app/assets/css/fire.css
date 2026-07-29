@@ -238,6 +238,10 @@ nav#nav a:hover {
 	box-shadow: var(--shadow);
 	padding: 12px 14px 10px;
 	min-width: 232px;
+	/* Deckel nötig, seit die Zeitstrahl-Zusammenfassung im Kasten steht: ohne
+	 * ihn zieht der Satz den Kasten in die Breite, bis er den mittig sitzenden
+	 * Abspielknopf berührt. Bei 960 Pixel Fensterbreite trat das auf. */
+	max-width: 320px;
 }
 
 #map-size {

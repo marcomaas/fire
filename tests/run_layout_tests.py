@@ -79,14 +79,17 @@ def main():
                 "--disable-gpu",
                 "--no-sandbox",
                 "--disable-dev-shm-usage",
-                # Die Seite wartet sechs Sekunden, bevor sie messt.
-                "--virtual-time-budget=20000",
+                # Die Testseite wartet sechs Sekunden, bevor sie messt. Das
+                # Budget endet knapp danach: unter virtueller Zeit rechnen die
+                # Animationen in zehn Rahmen sonst weiter, ohne dass das Ergebnis
+                # sich noch ändert — das kostete real über drei Minuten.
+                "--virtual-time-budget=8000",
                 "--dump-dom",
                 url,
             ],
             capture_output=True,
             text=True,
-            timeout=180,
+            timeout=300,
         )
     finally:
         server.shutdown()
