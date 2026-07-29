@@ -59,6 +59,7 @@ $(document).ready(function () {
       pause: "Pause",
       again: "Nochmal",
       sources: "Quellen",
+      imprint: "Impressum",
       outbreak: "Brandausbruch",
       acquisition: "Satellitenaufnahme",
       dayShort: "DD.MM.",
@@ -108,6 +109,7 @@ $(document).ready(function () {
       pause: "Pause",
       again: "Replay",
       sources: "Sources",
+      imprint: "Impressum",
       outbreak: "Fire outbreak",
       acquisition: "Satellite acquisition",
       dayShort: "MMM D",
@@ -303,6 +305,11 @@ $(document).ready(function () {
         '<a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> · ' +
         '<a href="javascript:;" class="attr-info">' +
         text.sources +
+        "</a> · " +
+        '<a href="' +
+        IMPRINT_URL +
+        '" target="_blank" rel="noopener">' +
+        text.imprint +
         "</a>",
     },
   ).addTo(map);
