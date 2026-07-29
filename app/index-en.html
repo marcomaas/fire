@@ -54,13 +54,27 @@
 			<div id="map-controls">
 				<div id="map-size"></div>
 				<div id="map-date"></div>
+
+				<div id="map-timeline">
+					<div id="timeline-track" role="img" aria-label="Timeline of the fire's progression">
+						<div id="timeline-unmapped"></div>
+						<div id="timeline-elapsed"></div>
+						<div id="timeline-ticks"></div>
+						<div id="timeline-head"></div>
+					</div>
+					<div id="timeline-scale">
+						<span id="timeline-from"></span>
+						<span id="timeline-to"></span>
+					</div>
+					<div id="timeline-summary"></div>
+				</div>
+
 				<div id="fire-caption">
 					<span id="fire-region"></span>
 					<span id="fire-status"></span>
 					<span><span id="fire-steps"></span> · Copernicus <a id="fire-source" href="#" target="_blank" rel="noopener"></a></span>
 					<span id="fire-note"></span>
 				</div>
-
 			</div>
 
 			<a id="map-startstop" href="javascript:;" title="Play the sequence"><span class="glyph"></span><span id="map-startstop-label">Play</span></a>

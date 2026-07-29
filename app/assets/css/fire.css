@@ -275,17 +275,107 @@ nav#nav a:hover {
 	color: var(--color-blue);
 }
 
-#map-throbber {
-	height: 4px;
-	background: var(--color-grey);
-	margin: var(--spacing-xs) 0 0;
+/* ---------- Zeitstrahl ---------- */
+
+/* Ersetzt den früheren Fortschrittsbalken, der rein nach abgespielten Bildern
+ * füllte: jeder Schritt war gleich lang, ob zwischen zwei Aufnahmen 22 oder 49
+ * Stunden lagen. Die Achse ist jetzt zeitproportional und beginnt beim
+ * Brandausbruch, nicht bei der ersten Aufnahme — der Abstand dazwischen betrug
+ * je Brand zwischen 20 und 106 Stunden und gehört ins Bild. */
+
+#map-timeline {
+	margin-top: var(--spacing-xs);
 }
 
-#map-throbber-bar {
+#timeline-track {
+	position: relative;
+	height: 14px;
+	margin-bottom: 3px;
+}
+
+/* Grundlinie. */
+#timeline-track::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 5px;
+	height: 4px;
+	background: var(--color-grey);
+}
+
+/* Zeitraum zwischen Brandausbruch und erster Satellitenaufnahme: schraffiert,
+ * weil dort nichts kartiert ist und die Animation ihn nicht zeigen kann. */
+#timeline-unmapped {
+	position: absolute;
+	left: 0;
+	top: 5px;
+	height: 4px;
+	width: 0;
+	background: repeating-linear-gradient(
+		135deg,
+		var(--color-blue-light) 0 2px,
+		transparent 2px 4px
+	);
+}
+
+#timeline-elapsed {
+	position: absolute;
+	top: 5px;
 	height: 4px;
 	width: 0;
 	background: var(--fire-red);
-	transition: width 90ms linear;
+	transition: width 90ms linear, left 90ms linear;
+}
+
+/* Eine Marke je Satellitenaufnahme — die Abstände zeigen, wie dicht kartiert
+ * wurde. */
+.timeline-tick {
+	position: absolute;
+	top: 1px;
+	width: 2px;
+	height: 12px;
+	margin-left: -1px;
+	background: var(--color-black);
+}
+
+.timeline-tick.outbreak {
+	width: 0;
+	height: 0;
+	top: 2px;
+	margin-left: -4px;
+	background: none;
+	border-left: 4px solid transparent;
+	border-right: 4px solid transparent;
+	border-bottom: 7px solid var(--color-black);
+}
+
+#timeline-head {
+	position: absolute;
+	top: 0;
+	width: 2px;
+	height: 14px;
+	margin-left: -1px;
+	background: var(--color-black);
+	box-shadow: 0 0 0 2px var(--color-white);
+	transition: left 90ms linear;
+}
+
+#timeline-scale {
+	display: flex;
+	justify-content: space-between;
+	gap: 8px;
+	font-size: 10px;
+	font-weight: var(--font-weight-bold);
+	color: var(--color-blue);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+#timeline-summary {
+	font-size: 11px;
+	color: var(--color-blue);
+	margin-top: 2px;
 }
 
 /* ---------- Abspielknopf ---------- */
