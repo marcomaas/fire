@@ -62,14 +62,22 @@ $(document).ready(function () {
       outbreak: "Brandausbruch",
       acquisition: "Satellitenaufnahme",
       dayShort: "DD.MM.",
-      /* "3 Tage kartiert, Brand begann 39 Stunden früher" */
-      summary: function (mappedText, delayText) {
+      /* Nennt zuerst das Ausbruchsdatum, dann den Verzug bis zur ersten
+       * Aufnahme, dann den kartierten Zeitraum — "wann war der Brand" ist die
+       * erste Frage, die der Zeitstrahl beantworten soll. */
+      summary: function (outbreakText, delayText, mappedText) {
         return (
-          mappedText + " kartiert · Brandausbruch " + delayText + " früher"
+          "Ausbruch " +
+          outbreakText +
+          " · erste Aufnahme " +
+          delayText +
+          " später · " +
+          mappedText +
+          " kartiert"
         );
       },
-      summaryNoDelay: function (mappedText) {
-        return mappedText + " kartiert";
+      summaryNoDelay: function (outbreakText, mappedText) {
+        return "Ausbruch " + outbreakText + " · " + mappedText + " kartiert";
       },
       days: function (n) {
         return n === 1 ? "1 Tag" : n + " Tage";
@@ -103,11 +111,20 @@ $(document).ready(function () {
       outbreak: "Fire outbreak",
       acquisition: "Satellite acquisition",
       dayShort: "MMM D",
-      summary: function (mappedText, delayText) {
-        return mappedText + " mapped · outbreak " + delayText + " earlier";
+      summary: function (outbreakText, delayText, mappedText) {
+        return (
+          "Outbreak " +
+          outbreakText +
+          " · first acquisition " +
+          delayText +
+          " later" +
+          " · " +
+          mappedText +
+          " mapped"
+        );
       },
-      summaryNoDelay: function (mappedText) {
-        return mappedText + " mapped";
+      summaryNoDelay: function (outbreakText, mappedText) {
+        return "Outbreak " + outbreakText + " · " + mappedText + " mapped";
       },
       days: function (n) {
         return n === 1 ? "1 day" : n + " days";
@@ -218,10 +235,11 @@ $(document).ready(function () {
       at(f.steps[f.steps.length - 1].acquired) - bounds.first,
     );
     var delay = bounds.first - bounds.outbreak;
+    var outbreakLabel = formatDay(bounds.outbreak);
     var summary =
       delay >= 3600000
-        ? text.summary(mapped, describeSpan(delay))
-        : text.summaryNoDelay(mapped);
+        ? text.summary(outbreakLabel, describeSpan(delay), mapped)
+        : text.summaryNoDelay(outbreakLabel, mapped);
     if (!f.closed) summary += " · " + text.stillOpen;
     $("#timeline-summary").text(summary);
 
@@ -595,6 +613,49 @@ $(document).ready(function () {
     morphStep();
   }
 
+  /* ---------- Kartenausschnitt ---------- */
+
+  /* Setzt den Ausschnitt auf die letzte, größte Ausdehnung — einschließlich der
+   * Nebenflächen, die bei zerstreuten Bränden weit über die Hauptfläche
+   * hinausreichen.
+   *
+   * Der Umweg über invalidateSize und den Wiederholversuch ist nötig, weil
+   * fitBounds die Zoomstufe aus der Containergröße berechnet. Steht die noch
+   * nicht fest — in einem gerade eingefügten iframe der Regelfall — ergibt die
+   * Rechnung eine Stufe unterhalb von minZoom, und Leaflet zeigt statt des
+   * Brandes halb Europa. Trat bei 470 Pixel breiten Rahmen zuverlässig auf,
+   * während die Vollbildansicht unauffällig blieb. */
+  function fitToFire(f, attempt) {
+    var last = f.steps[f.steps.length - 1];
+    var viewBounds = new L.LatLngBounds(last.polygon);
+    (last.others || []).forEach(function (ring) {
+      viewBounds.extend(new L.LatLngBounds(ring));
+    });
+
+    map.invalidateSize(false);
+
+    var size = map.getSize();
+    if ((size.x < 60 || size.y < 60) && (attempt || 0) < 12) {
+      setTimeout(function () {
+        fitToFire(f, (attempt || 0) + 1);
+      }, 60);
+      return;
+    }
+
+    map.fitBounds(viewBounds.pad(0.35));
+  }
+
+  /* Ändert sich die Rahmengröße nachträglich — Drehen eines Telefons, ein
+   * aufklappendes Layout —, passt der Ausschnitt sonst nicht mehr. */
+  var resizeTimer = null;
+  $(window).on("resize", function () {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      resizeTimer = null;
+      if (fire) fitToFire(fire);
+    }, 250);
+  });
+
   /* ---------- Brand wechseln ---------- */
 
   function selectFire(slug, citySlug) {
@@ -625,16 +686,7 @@ $(document).ready(function () {
     /* Ausschnitt auf die letzte, groesste Ausdehnung setzen — einschliesslich
      * der Nebenflaechen, die bei zerstreuten Braenden weit ueber die
      * Hauptflaeche hinausreichen. */
-    /* Nicht "bounds" nennen — so heißen die Grenzen des Zeitstrahls weiter
-     * oben, und eine gleichnamige lokale Variable wäre eine Falle für die
-     * nächste Änderung an dieser Funktion. */
-    var last = fire.steps[fire.steps.length - 1];
-    var viewBounds = new L.LatLngBounds(last.polygon);
-    (last.others || []).forEach(function (ring) {
-      viewBounds.extend(new L.LatLngBounds(ring));
-    });
-    map.fitBounds(viewBounds.pad(0.35));
-
+    fitToFire(fire);
     buildTimeline(fire);
     showStep(fire.steps[0]);
     setButtonState(fire.steps.length < 2 ? "again" : "play");

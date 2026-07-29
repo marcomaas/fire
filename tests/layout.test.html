@@ -179,7 +179,46 @@ function testFrame(page, vp, win, doc) {
 		if (open) route.click();
 	}
 
-	/* 8. Abspielknopf beschriftet und bedienbar. */
+	/* 8. Der Kartenausschnitt sitzt auf dem Brand. Ohne diese Prüfung fiel es
+	 *    nicht auf, dass fitBounds in kleinen Rahmen auf die kleinste Zoomstufe
+	 *    zurückfällt: die Containergröße stand beim Aufruf noch nicht fest, und
+	 *    statt des Brandes war halb Europa zu sehen. Geprüft wird die gezeichnete
+	 *    Fläche selbst — bei falscher Zoomstufe schrumpft sie auf wenige Pixel. */
+	var burnt = doc.querySelector('.leaflet-overlay-pane path');
+	check(tag + ' | Brandfläche gezeichnet', !!burnt);
+	if (burnt) {
+		var bb = burnt.getBoundingClientRect();
+		var anteil = Math.max(bb.width / vp.w, bb.height / vp.h);
+		check(tag + ' | Kartenausschnitt sitzt auf dem Brand', anteil >= 0.12,
+			'größte Ausdehnung nur ' + (anteil * 100).toFixed(1) + ' % des Rahmens ' +
+			'(' + Math.round(bb.width) + '×' + Math.round(bb.height) + ' px)');
+	}
+
+	/* 9. Zeitstrahl aufgebaut: Marken je Aufnahme, Beschriftung, Zusammenfassung. */
+	var ticks = doc.querySelectorAll('#timeline-ticks .timeline-tick:not(.outbreak)');
+	check(tag + ' | eine Zeitmarke je Aufnahme', ticks.length >= 2,
+		ticks.length + ' Marken');
+	var von = doc.getElementById('timeline-from');
+	var bis = doc.getElementById('timeline-to');
+	check(tag + ' | Zeitachse beschriftet',
+		!!von && !!bis && von.textContent.trim() && bis.textContent.trim());
+	var zus = doc.getElementById('timeline-summary');
+	check(tag + ' | Zeitstrahl-Zusammenfassung gefüllt',
+		!!zus && zus.textContent.trim().length > 0);
+	/* Die Marken müssen innerhalb der Achse liegen — bei einem Rechenfehler in
+	 * der Positionierung ragen sie sonst aus dem Kasten heraus. */
+	if (ticks.length) {
+		var achse = rect(doc.getElementById('timeline-track'));
+		var raus = [];
+		Array.prototype.forEach.call(ticks, function (t) {
+			var r = rect(t);
+			if (r.l < achse.l - 2 || r.r > achse.r + 2) raus.push(Math.round(r.l));
+		});
+		check(tag + ' | Zeitmarken innerhalb der Achse', raus.length === 0,
+			raus.length + ' außerhalb');
+	}
+
+	/* 10. Abspielknopf beschriftet und bedienbar. */
 	var play = doc.getElementById('map-startstop');
 	check(tag + ' | Abspielknopf sichtbar', visible(play));
 	var label = doc.getElementById('map-startstop-label');

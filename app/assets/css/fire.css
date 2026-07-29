@@ -287,10 +287,12 @@ nav#nav a:hover {
 	margin-top: var(--spacing-xs);
 }
 
+/* Seitliche Einrückung, damit Marken an den Enden der Achse nicht halb
+ * abgeschnitten werden. */
 #timeline-track {
 	position: relative;
 	height: 14px;
-	margin-bottom: 3px;
+	margin: 0 5px 3px;
 }
 
 /* Grundlinie. */
