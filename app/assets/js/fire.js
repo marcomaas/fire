@@ -549,14 +549,13 @@ $(document).ready(function () {
     }
 
     var index = 0;
-    var frames = 0;
-    var totalFrames = (fire.steps.length - 1) * FRAMES_PER_STEP;
 
     showStep(fire.steps[0]);
 
     function morphStep() {
       var from = fire.steps[index];
       var to = fire.steps[index + 1];
+      var timing = stepTiming(from, to);
 
       /* Der erreichte Stand bleibt als blasser Schatten liegen, damit das
        * Wachstum auch am Ende noch nachvollziehbar ist. */
@@ -571,20 +570,14 @@ $(document).ready(function () {
         to.polygon.map(function (p) {
           return [p[0], p[1]];
         }),
-        FRAMES_PER_STEP,
-        STEP_DURATION,
+        timing.frames,
+        timing.duration,
         function (end, ring) {
           if (!ring || !ring.length) return;
 
           frameInStep++;
-          frames++;
-          $("#map-throbber-bar").css(
-            "width",
-            Math.min(100, (100 * frames) / totalFrames).toFixed(2) + "%",
-          );
-
           firePoly.setLatLngs(ring);
-          updateReadout(from, to, Math.min(1, frameInStep / FRAMES_PER_STEP));
+          updateReadout(from, to, Math.min(1, frameInStep / timing.frames));
 
           if (!end) return;
 
