@@ -108,6 +108,27 @@ und `GRA` (Schadensklassifizierung). Alle drei enthalten die beobachtete Brandfl
 sortiert wird nach Aufnahmezeit, sodass ein späterer Stand die Reihe unabhängig von
 seinem Typ verlängert.
 
+## Veröffentlichung
+
+Live unter **https://apps.datenfreunde.com** (Vercel, mit dem Repository verbunden — ein Push
+veröffentlicht neu). Zusätzlich erreichbar über `waldbraende.vercel.app` und
+`waldbraende-datenfreunde.vercel.app`.
+
+`vercel.json` liefert `app/` als Wurzel aus, damit die relativen Pfade in den HTML-Dateien
+unverändert bleiben. Die Wurzel `/` zeigt dabei **unmittelbar** auf `app/index-de.html` und
+nicht auf eine Weiterleitungsseite: Vorschau-Crawler von LinkedIn, Bluesky oder Mastodon
+führen kein JavaScript aus und sahen auf der Weiterleitungsseite nur einen Titel — die
+Vorschaukarte blieb leer. `app/index.html` bleibt als Einstieg für direkte
+Verzeichnisaufrufe erhalten, etwa bei einem lokalen Server.
+
+`fires.js` bekommt `must-revalidate`, sonst verschwindet der zweimal täglich aktualisierte
+Datenstand hinter dem Cache.
+
+**Zu Einbettungen bei LinkedIn:** LinkedIn nimmt keinen `iframe`-Code an und bettet nur von
+einer eigenen Anbieterliste ein. Dort gehört die reine Adresse ins Feld — der Beitrag zeigt
+dann eine Vorschaukarte, die auf die interaktive Seite führt. Deshalb müssen `og:title`,
+`og:description`, `og:image` und `og:url` auf **jeder** einzeln teilbaren Seite stehen.
+
 ## Verlinkbare Zustände
 
 Der Anker hält Brand und Vergleichsstadt fest:

@@ -19,6 +19,11 @@ $(document).ready(function () {
    * Braende in derselben Zone liegen. */
   var TZ_OFFSET_HOURS = 2;
 
+  /* Impressum der Datenfreunde. Steht in der Herkunftszeile der Karte, weil eine
+   * randlose Kartenanwendung keine eigene Fußzeile hat — und weil das die
+   * einzige Stelle ist, die auch im eingebetteten Zustand sichtbar bleibt. */
+  var IMPRINT_URL = "https://www.datenfreunde.com/impressum";
+
   /* Abspieldauer je Abschnitt richtet sich nach dem tatsächlichen Zeitabstand
    * zweier Aufnahmen — vorher war jeder Abschnitt gleich lang, ob 22 oder 49
    * Stunden dazwischen lagen. Gedeckelt nach oben und unten, damit ein sehr

@@ -6,6 +6,10 @@
   "outputDirectory": null,
   "rewrites": [
     {
+      "source": "/",
+      "destination": "/app/index-de.html"
+    },
+    {
       "source": "/((?!app/).*)",
       "destination": "/app/$1"
     }
