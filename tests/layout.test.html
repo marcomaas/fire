@@ -63,6 +63,11 @@ var BOXES = [
 	'#map-startstop',
 	'#map-fires',
 	'#map-compare',
+	/* Tritt bei flachen Rahmen an die Stelle der beiden Listen. Steht mit in
+	 * dieser Liste, damit die Prüfungen auf Sichtbereich und Überlagerung auch
+	 * für die kompakte Darstellung gelten — sonst wäre gerade die engste
+	 * Rahmengröße die am wenigsten geprüfte. */
+	'#map-picker',
 	'.leaflet-control-attribution'
 ];
 
@@ -234,8 +239,84 @@ function testFrame(page, vp, win, doc) {
 	var label = doc.getElementById('map-startstop-label');
 	check(tag + ' | Abspielknopf beschriftet', !!label && label.textContent.trim().length > 0);
 
-	/* 9. Im Rahmen ist die Kopfzeile ausgeblendet — das ist gewollt, macht aber
-	 *    Prüfung 6 zur Pflicht. */
+	/* 11. Genau eine Auswahl ist sichtbar. Bei flachen Rahmen treten die
+	 *     Auswahlfelder an die Stelle der Listen. Wären beide gleichzeitig da,
+	 *     stünden zwei Bedienwege übereinander; wäre keiner da, ließe sich der
+	 *     Brand nicht wechseln. */
+	var stack = doc.querySelector('.panel-stack');
+	var picker = doc.getElementById('map-picker');
+	var listenAn = visible(stack);
+	var felderAn = visible(picker);
+	check(tag + ' | genau eine Auswahl sichtbar', listenAn !== felderAn,
+		'Listen ' + listenAn + ', Auswahlfelder ' + felderAn);
+
+	/* 12. Jeder Brand ist erreichbar. Das ist die Prüfung, die gefehlt hat: bei
+	 *     960×540 lagen vier von fünf Bränden im Kasten, der fünfte darunter —
+	 *     scrollbar, aber ohne jeden Hinweis darauf. Erreichbar heißt daher
+	 *     entweder sichtbar, oder scrollbar MIT Anzeige. */
+	var anzahl = win._fires ? win._fires.length : 0;
+	check(tag + ' | Branddaten vorhanden', anzahl > 0);
+
+	if (felderAn) {
+		var opts = doc.getElementById('pick-fire');
+		check(tag + ' | Auswahlfeld führt jeden Brand',
+			!!opts && opts.options.length === anzahl,
+			'Feld hat ' + (opts ? opts.options.length : 0) + ' von ' + anzahl);
+		/* Der leere Eintrag im Städtefeld ist der Weg zurück zur reinen
+		 * Brandfläche — in der Liste leistet das ein zweiter Klick. */
+		var stadtFeld = doc.getElementById('pick-city');
+		check(tag + ' | Städtefeld erlaubt "ohne Vergleich"',
+			!!stadtFeld && stadtFeld.options.length > 1 && stadtFeld.options[0].value === '',
+			stadtFeld ? 'erster Wert ' + JSON.stringify(stadtFeld.options[0].value) : 'kein Feld');
+	} else if (listenAn) {
+		var ul = doc.querySelector('#map-fires ul');
+		var eintraege = ul ? ul.querySelectorAll('li') : [];
+		check(tag + ' | Liste führt jeden Brand', eintraege.length === anzahl,
+			'Liste hat ' + eintraege.length + ' von ' + anzahl);
+
+		if (ul) {
+			var box = doc.getElementById('map-fires');
+			var verdeckt = 0;
+			var ur = rect(ul);
+			Array.prototype.forEach.call(eintraege, function (li) {
+				var r = rect(li);
+				if (r.t < ur.t - 1 || r.b > ur.b + 1) verdeckt++;
+			});
+			var scrollbar = ul.scrollHeight > ul.clientHeight + 1;
+			var angezeigt = box.classList.contains('has-more') ||
+				box.classList.contains('has-before');
+			check(tag + ' | verdeckte Brände sind angezeigt',
+				verdeckt === 0 || (scrollbar && angezeigt),
+				verdeckt + ' von ' + eintraege.length + ' außerhalb, scrollbar ' +
+				scrollbar + ', Anzeige "' + box.className + '"');
+
+			/* Ab der Höhe, die die Beispielseite als Regelfall ausgibt (960×540),
+			 * genügt "scrollbar mit Anzeige" nicht: dort muss die Auswahl
+			 * vollständig im Blick sein. Vorher war der fünfte Brand bei genau
+			 * dieser Größe unter der Kante, während die Städteliste daneben 233
+			 * Pixel belegte. */
+			if (vp.h >= 500) {
+				check(tag + ' | bei ' + vp.h + ' px Höhe ist die Auswahl vollständig sichtbar',
+					verdeckt === 0,
+					verdeckt + ' von ' + eintraege.length + ' außerhalb');
+			}
+
+			/* Die Städteliste darf nicht zum Schlitz zusammenfallen. Gemessen war
+			 * sie bei 420×380 einmal 45 Pixel hoch bei 284 Pixeln Inhalt — ein
+			 * Fenster auf einen einzigen Eintrag. */
+			var cul = doc.querySelector('#map-compare ul');
+			if (cul && cul.querySelectorAll('li').length) {
+				var zeile = rect(cul.querySelector('li')).h;
+				check(tag + ' | Städteliste zeigt mehr als eine Zeile',
+					rect(cul).h >= zeile * 2 - 1,
+					'Liste ' + Math.round(rect(cul).h) + ' px bei ' +
+					Math.round(zeile) + ' px Zeilenhöhe');
+			}
+		}
+	}
+
+	/* 13. Im Rahmen ist die Kopfzeile ausgeblendet — das ist gewollt, macht aber
+	 *     Prüfung 6 zur Pflicht. */
 	check(tag + ' | Rahmen erkannt', doc.documentElement.classList.contains('in-frame'));
 }
 

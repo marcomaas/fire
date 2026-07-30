@@ -504,17 +504,57 @@ nav#nav a:hover {
  * wird, ist die Hauptentscheidung — welche Stadt daneben liegt, die zweite. */
 #map-fires {
 	flex-shrink: 0;
-	max-height: 50%;
+	/* 50 Prozent schnitten die deutsche Liste um 5 Pixel ab — die Namen sind
+	 * laenger als die englischen, und der fuenfte Eintrag lag knapp unter der
+	 * Kante. 60 Prozent tragen fuenf Eintraege vollstaendig und lassen der
+	 * Staedteliste immer noch mehr als zwei Zeilen. Waechst die Liste weiter,
+	 * scrollt sie mit Anzeige — und die Layout-Pruefung ab 500 Pixel Hoehe wird
+	 * rot, damit die Entscheidung nicht stillschweigend faellt. */
+	max-height: 60%;
 }
 
 #map-compare {
-	flex: 1 1 auto;
+	flex: 0 1 auto;
 }
 
 #map-fires ul,
 #map-compare ul {
 	overflow-y: auto;
 	min-height: 0;
+}
+
+/* Anzeige, dass die Liste weitergeht. Ohne sie endete die Liste einfach an der
+ * Kante — bei 960x540 fehlte der fuenfte Brand, und nichts deutete darauf hin,
+ * dass da noch etwas ist. Der Verlauf sitzt am Kasten, nicht an der Liste: an
+ * der Liste wuerde er mitscrollen. fire.js setzt die Klassen. */
+#map-fires,
+#map-compare {
+	position: relative;
+}
+
+#map-fires.has-more::after,
+#map-compare.has-more::after,
+#map-fires.has-before::before,
+#map-compare.has-before::before {
+	content: "";
+	position: absolute;
+	left: 2px;
+	right: 2px;
+	height: 18px;
+	pointer-events: none;
+}
+
+#map-fires.has-more::after,
+#map-compare.has-more::after {
+	bottom: 2px;
+	background: linear-gradient(to top, var(--color-white), rgba(255, 255, 255, 0));
+}
+
+#map-fires.has-before::before,
+#map-compare.has-before::before {
+	top: 26px;
+	background: linear-gradient(to bottom, var(--color-white), rgba(255, 255, 255, 0));
+	z-index: 1;
 }
 
 #map-fires h2,
@@ -705,6 +745,94 @@ html.in-frame #main {
 	top: 0;
 }
 
+/* ---------- Kompakte Auswahl ---------- */
+
+/* Zwei Auswahlfelder statt der beiden Listen. Kommt nur bei flachen Rahmen zum
+ * Einsatz, siehe die Hoehen-Media-Query weiter unten. Im Regelfall unsichtbar. */
+#map-picker {
+	display: none;
+	position: absolute;
+	right: var(--gutter);
+	top: var(--gutter);
+	z-index: 700;
+	flex-direction: column;
+	gap: 6px;
+	background: var(--color-white);
+	border: 2px solid var(--color-black);
+	box-shadow: var(--shadow);
+	padding: 8px 10px 9px;
+	max-width: 172px;
+}
+
+#map-picker label {
+	display: block;
+}
+
+#map-picker span {
+	display: block;
+	font-size: 10px;
+	font-weight: var(--font-weight-bold);
+	text-transform: uppercase;
+	letter-spacing: 0.09em;
+	color: var(--color-blue);
+	margin-bottom: 2px;
+}
+
+/* Eigene Darstellung statt der Systemvorgabe, damit das Feld nicht aus dem
+ * Erscheinungsbild faellt. Der Pfeil steckt als Data-URI im Hintergrund, weil
+ * die Anwendung ohne externe Abrufe auskommen soll. */
+#map-picker select {
+	appearance: none;
+	-webkit-appearance: none;
+	width: 100%;
+	font-family: inherit;
+	font-size: 12px;
+	font-weight: var(--font-weight-bold);
+	color: var(--color-black);
+	background-color: var(--color-white);
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0h10L5 6z' fill='%23262626'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 7px center;
+	background-size: 8px 5px;
+	border: 1px solid var(--color-black);
+	border-radius: 0;
+	padding: 5px 22px 5px 7px;
+	cursor: pointer;
+}
+
+#map-picker select:focus-visible {
+	outline: 2px solid var(--color-yellow);
+	outline-offset: 1px;
+}
+
+/* Unter dieser Hoehe teilen sich Auswahl- und Vergleichsblock so wenig Platz,
+ * dass von fuenf Braenden einer sichtbar blieb. Gemessen bei 420x380 und
+ * 500x400 — beides Groessen, die als Einbettung in einer Seitenspalte
+ * tatsaechlich vorkommen. Die Grenze liegt bei 440 Pixeln, damit 460x460 noch
+ * die Listen bekommt. */
+@media (max-height: 440px) {
+	.panel-stack {
+		display: none;
+	}
+
+	/* Nebeneinander statt uebereinander: gestapelt war der Kasten 113 Pixel hoch
+	 * und stiess bei 420x380 in die Bedienleiste, die von unten heraufreicht
+	 * (gemessene Ueberlagerung 40x25 Pixel). In einer Reihe bleibt er unter 60
+	 * Pixeln und beide Kaesten teilen sich die Hoehe des Rahmens ohne Beruehrung. */
+	#map-picker {
+		display: flex;
+		flex-direction: row;
+		gap: 8px;
+		left: var(--gutter);
+		max-width: none;
+	}
+
+	#map-picker label {
+		flex: 1 1 0;
+		min-width: 0;
+	}
+}
+
 /* ---------- Kleine Bildschirme ---------- */
 
 @media (max-width: 720px) {
@@ -712,12 +840,17 @@ html.in-frame #main {
 		font-size: 14px;
 	}
 
+	/* Hoehe bewusst bestimmt (height, nicht max-height): eine unbestimmte Hoehe
+	 * laesst prozentuale Angaben an den Kindern unaufgeloest, und der Deckel auf
+	 * dem Auswahlblock bliebe wirkungslos - die Staedteliste fiel dadurch auf
+	 * null Pixel zusammen. Die 108 Pixel halten die untere Kante frei fuer
+	 * Bedienleiste, Abspielknopf und Herkunftsangabe. */
 	.panel-stack {
 		right: 8px;
 		top: 8px;
 		width: 148px;
 		bottom: auto;
-		max-height: calc(100% - 130px);
+		height: calc(100% - 108px);
 	}
 
 	#map-size {
@@ -753,11 +886,6 @@ html.in-frame #main {
 		gap: 8px;
 	}
 
-	/* Die Auswahlbloecke duerfen die Karte nicht vollstaendig zudecken. Reicht
-	 * die Hoehe nicht, wird in ihnen gescrollt. */
-	.panel-stack {
-		max-height: calc(100% - 108px);
-	}
 }
 
 /* Sehr schmale Rahmen: die Staedteliste wird zur eigenen scrollenden Flaeche,

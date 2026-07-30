@@ -93,6 +93,7 @@ $(document).ready(function () {
       },
       stillOpen: "Kartierung läuft weiter",
       rangeJoin: " bis ",
+      noCompare: "ohne Vergleich",
     },
     en: {
       dateFormat: "YYYY-MM-DD HH:mm",
@@ -142,6 +143,7 @@ $(document).ready(function () {
       },
       stillOpen: "Mapping ongoing",
       rangeJoin: " to ",
+      noCompare: "no comparison",
     },
   }[lang];
 
@@ -399,6 +401,7 @@ $(document).ready(function () {
     }
     activeCity = null;
     $("#map-compare a").removeClass("highlight");
+    syncPickers();
     if (refit === true && fire) fitToFire(fire);
     syncHash();
   }
@@ -418,6 +421,7 @@ $(document).ready(function () {
       clearCity(true);
     });
     activeCity = slug;
+    syncPickers();
     $("#map-compare a").removeClass("highlight");
     $('#map-compare a[data-city="' + slug + '"]').addClass("highlight");
 
@@ -743,6 +747,8 @@ $(document).ready(function () {
 
     $("#map-fires a").removeClass("highlight");
     $('#map-fires a[data-fire="' + fire.slug + '"]').addClass("highlight");
+    syncPickers();
+    updateScrollHints();
 
     /* Ausschnitt auf die letzte, groesste Ausdehnung setzen — einschliesslich
      * der Nebenflaechen, die bei zerstreuten Braenden weit ueber die
@@ -814,6 +820,75 @@ $(document).ready(function () {
     );
   }
 
+  /* Kompakte Auswahl fuer flache Rahmen. Traegt dieselben Eintraege wie die
+   * beiden Listen und wird von denselben Funktionen mitgefuehrt — es gibt keinen
+   * zweiten Zustand, nur eine zweite Darstellung. Welche der beiden sichtbar
+   * ist, entscheidet allein das Stylesheet ueber die Rahmenhoehe. */
+  /* Zeigt an, dass eine Liste weitergeht. Gelesen wird der tatsaechliche
+   * Scrollzustand, nicht die Anzahl der Eintraege — eine Liste kann bei einer
+   * Rahmenhoehe vollstaendig passen und bei der naechsten nicht. Deshalb auch
+   * beim Groessenwechsel neu bestimmt. */
+  function updateScrollHints() {
+    ["#map-fires", "#map-compare"].forEach(function (sel) {
+      var box = $(sel);
+      var ul = box.find("ul")[0];
+      if (!ul) return;
+      var rest = ul.scrollHeight - ul.clientHeight - ul.scrollTop;
+      box.toggleClass("has-more", rest > 2);
+      box.toggleClass("has-before", ul.scrollTop > 2);
+    });
+  }
+
+  $(document).on("scroll", "#map-fires ul, #map-compare ul", updateScrollHints);
+  $(window).on("resize", updateScrollHints);
+
+  function buildPickers() {
+    $("#map-picker [data-label=fires]").text(text.fires);
+    $("#map-picker [data-label=compare]").text(text.compare);
+
+    var fires = $("#pick-fire").empty();
+    _fires.forEach(function (item) {
+      $("<option>")
+        .attr("value", item.slug)
+        .text(item.name[lang] || item.name.de)
+        .appendTo(fires);
+    });
+
+    /* Der erste Eintrag hebt den Vergleich auf. Ein Auswahlfeld hat immer einen
+     * Wert — ohne diesen Eintrag gaebe es keinen Weg zurueck zur reinen
+     * Brandfläche, den die Liste ueber ein zweites Anklicken bietet. */
+    var cities = $("#pick-city").empty();
+    $("<option>").attr("value", "").text(text.noCompare).appendTo(cities);
+    if (typeof _cities !== "undefined") {
+      _cities.forEach(function (city) {
+        $("<option>")
+          .attr("value", city.slug)
+          .text(city.label[lang] || city.label.de)
+          .appendTo(cities);
+      });
+    }
+
+    syncPickers();
+  }
+
+  function syncPickers() {
+    if (fire) $("#pick-fire").val(fire.slug);
+    $("#pick-city").val(activeCity || "");
+  }
+
+  $(document).on("change", "#pick-fire", function () {
+    selectFire($(this).val());
+  });
+
+  $(document).on("change", "#pick-city", function () {
+    var slug = $(this).val();
+    if (!slug) {
+      clearCity(true);
+      return;
+    }
+    showCity(slug);
+  });
+
   function buildFireButtons() {
     var list = $("#map-fires ul").empty();
     _fires.forEach(function (item) {
@@ -877,7 +952,9 @@ $(document).ready(function () {
 
   buildFireButtons();
   buildCityButtons();
+  buildPickers();
   fillInfoFigures();
+  updateScrollHints();
 
   if (window.top !== window) $("html").addClass("in-frame");
 
