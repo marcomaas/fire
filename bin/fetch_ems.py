@@ -107,11 +107,25 @@ TIMEOUT = 120
 RETRIES = 4
 
 
+class Blocked(Exception):
+    """Der Dienst weist uns ab — Ratenbegrenzung oder Sperre.
+
+    Bewusst von einem normalen Netzfehler unterschieden: ein Fehlschlag, der
+    "existiert nicht" bedeutet, und einer, der "wir duerfen gerade nicht"
+    bedeutet, verlangen unterschiedliche Reaktionen. Wer beides gleich behandelt,
+    baut sich eine Suche, die bei Abweisung stillschweigend zu frueh aufhoert
+    und "nichts Neues gefunden" meldet.
+    """
+
+
 def fetch_json(url):
     """Holt eine JSON-Antwort und wiederholt bei Netzfehlern mit Wartezeit.
 
     Die groessten Delineation-Produkte sind mehrere Megabyte gross; unter der
     Last einer laufenden Grosslage bricht der Server Verbindungen ab.
+
+    Abweisungen mit 403 oder 429 werden NICHT wiederholt - ein wiederholter
+    Versuch verschaerft die Ratenbegrenzung nur - und als Blocked gemeldet.
     """
     last = None
     for attempt in range(RETRIES):
@@ -119,6 +133,14 @@ def fetch_json(url):
             req = urllib.request.Request(url, headers={"User-Agent": "fire-viz/2.0 (+github.com/marcomaas/fire)"})
             with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
                 return json.load(resp)
+        except urllib.error.HTTPError as err:
+            if err.code in (403, 429):
+                raise Blocked(f"HTTP {err.code} — Ratenbegrenzung oder Sperre") from err
+            # 404 und andere Statusfehler sind Aussagen ueber die Ressource,
+            # kein Netzproblem. Einmal genuegt.
+            if 400 <= err.code < 500:
+                raise
+            last = err
         except (urllib.error.URLError, TimeoutError, ConnectionError, json.JSONDecodeError) as err:
             last = err
             if attempt < RETRIES - 1:
@@ -451,12 +473,26 @@ def discover(look_back=14, miss_limit=8):
     candidates = []
     number = start
     misses = 0
+    blocked_at = None
 
     while misses < miss_limit:
         code = f"EMSR{number}"
         number += 1
         try:
             payload = fetch_json(f"{API}?code={code}")
+        except Blocked as err:
+            # Abweisung ist keine Aussage darueber, ob es die Aktivierung gibt.
+            # Als Fehlschlag gezaehlt wuerde sie die Suche zu frueh beenden und
+            # das Ergebnis als "nichts Neues" ausgeben. Deshalb: abbrechen und
+            # sagen, wie weit gekommen wurde.
+            print(
+                f"\nSuche bei {code} abgebrochen: {err}\n"
+                f"Bis {code} geprueft, darueber liegende Aktivierungen sind UNGEPRUEFT.\n"
+                "Spaeter erneut laufen lassen — der Dienst begrenzt die Abfragerate.",
+                file=sys.stderr,
+            )
+            blocked_at = code
+            break
         except Exception as err:  # noqa: BLE001 - eine Luecke darf die Suche nicht beenden
             print(f"{code}: nicht abrufbar ({err})", file=sys.stderr)
             misses += 1
@@ -495,7 +531,17 @@ def discover(look_back=14, miss_limit=8):
             print(f"    AOI{aoi.get('number'):02d} {str(aoi.get('name'))[:26]:28s} Zeitschnitte={len(ready)}{flag}")
 
     print()
+    if blocked_at:
+        print(
+            f"ACHTUNG: Suche wurde bei {blocked_at} abgewiesen — das Ergebnis ist "
+            "unvollstaendig. Was oberhalb liegt, wurde nicht geprueft."
+        )
     if not candidates:
+        if blocked_at:
+            # Kein grünes Signal ohne sichtbaren Geltungsbereich: eine abgewiesene
+            # Suche darf nicht wie eine erfolglose aussehen.
+            print("Bis zum Abbruch keine neuen darstellbaren Waldbraende gefunden.")
+            return 2
         print("Keine neuen darstellbaren Waldbraende gefunden.")
         return 1
 

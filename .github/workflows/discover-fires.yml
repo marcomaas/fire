@@ -94,5 +94,21 @@ jobs:
           fi
 
       - name: Nichts gefunden
-        if: steps.scan.outputs.found != '0'
+        if: steps.scan.outputs.found == '1'
         run: echo 'Keine neuen darstellbaren Waldbrände — kein Issue angelegt.' >> "$GITHUB_STEP_SUMMARY"
+
+      # Rückgabewert 2 heißt: der Dienst hat die Suche abgewiesen, das Ergebnis
+      # ist unvollständig. Das darf nicht wie ein erfolgloser Lauf aussehen —
+      # sonst liest sich eine Ratenbegrenzung als "es gibt nichts Neues".
+      - name: Suche war unvollständig
+        if: steps.scan.outputs.found == '2'
+        run: |
+          {
+            echo '### Suche unvollständig'
+            echo
+            echo 'Der Copernicus-Dienst hat die Abfrage abgewiesen (Ratenbegrenzung).'
+            echo 'Bis zum Abbruch wurde nichts Neues gefunden — was darüber liegt, ist'
+            echo 'UNGEPRÜFT. Der nächste wöchentliche Lauf holt es nach; bei Eile den'
+            echo 'Workflow von Hand erneut starten.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1

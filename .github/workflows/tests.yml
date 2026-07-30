@@ -59,6 +59,7 @@ jobs:
           fires = json.loads(text[text.find("[") : text.rfind("]") + 1])
 
           fehler = []
+          hinweise = []
           if not fires:
               fehler.append("keine Brände in fires.js")
 
@@ -77,15 +78,26 @@ jobs:
                       fehler.append(f"{slug} {step['acquired']}: Umriss zu klein")
                   if (step.get("size_ha") or 0) <= 0:
                       fehler.append(f"{slug} {step['acquired']}: Fläche nicht positiv")
-                  # Verbrannte Fläche verschwindet nicht wieder. Ein Rückgang wäre
-                  # ein Zeichen für vertauschte oder fehlerhafte Stände.
+              # Verbrannte Fläche verschwindet physisch nicht wieder — die
+              # KARTIERTE Fläche kann aber sinken, wenn ein späterer Stand
+              # genauer abgrenzt und vorher mitgezählte unverbrannte Inseln
+              # ausnimmt. Beobachtet am 30.07.2026 bei Artana: 7.258 → 6.724 ha.
+              # Deshalb ist ein Rückgang ein Hinweis, kein Fehler — erst eine
+              # Halbierung deutet auf vertauschte oder fehlerhafte Stände.
               flaechen = [s.get("size_ha") or 0 for s in steps]
               for a, b in zip(flaechen, flaechen[1:]):
                   if b < a * 0.5:
                       fehler.append(
                           f"{slug}: Fläche halbiert sich von {a:.0f} auf {b:.0f} ha"
                       )
+                  elif b < a:
+                      hinweise.append(
+                          f"{slug}: kartierte Fläche sinkt von {a:.0f} auf {b:.0f} ha "
+                          f"({(1 - b / a) * 100:.0f} %) — vermutlich genauere Abgrenzung"
+                      )
 
+          for h in hinweise:
+              print("HINWEIS", h)
           for f in fehler:
               print("FAIL", f)
           print(f"{len(fires)} Brände, {sum(len(x['steps']) for x in fires)} Zeitschnitte geprüft")
