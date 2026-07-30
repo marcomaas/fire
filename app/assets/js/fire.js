@@ -94,6 +94,7 @@ $(document).ready(function () {
       stillOpen: "Kartierung läuft weiter",
       rangeJoin: " bis ",
       noCompare: "ohne Vergleich",
+      nearest: "am nächsten zum Brandort",
     },
     en: {
       dateFormat: "YYYY-MM-DD HH:mm",
@@ -144,6 +145,7 @@ $(document).ready(function () {
       stillOpen: "Mapping ongoing",
       rangeJoin: " to ",
       noCompare: "no comparison",
+      nearest: "closest to the fire",
     },
   }[lang];
 
@@ -351,20 +353,26 @@ $(document).ready(function () {
     fillColor: "#221100",
     fillOpacity: 0.12,
   };
+  /* Der Stadtumriss liegt ueber der Brandflaeche. Bei 0,35 Deckkraft zog das
+   * weisse Fuellen der roten Flaeche die Farbe, gerade in der Schnittmenge - und
+   * damit an der Stelle, um die es beim Vergleich geht. Die Fuellung soll den
+   * Umriss als Flaeche lesbar machen, nicht das Darunterliegende ueberdecken;
+   * dafuer traegt jetzt die Linie. */
   var cityStyle = {
     stroke: true,
     color: "#1B3A6B",
     opacity: 1,
-    weight: 2,
+    weight: 3,
     fill: true,
     fillColor: "#FFFFFF",
-    fillOpacity: 0.35,
+    fillOpacity: 0.1,
   };
 
   var firePoly = new L.Polygon([], firePolyStyle).addTo(map);
   var otherLayer = new L.LayerGroup().addTo(map);
   var historyLayer = new L.LayerGroup().addTo(map);
   var cityLayer = null;
+  var cityLabel = null;
 
   var fire = null;
   var timer = null;
@@ -399,8 +407,13 @@ $(document).ready(function () {
       map.removeLayer(cityLayer);
       cityLayer = null;
     }
+    if (cityLabel) {
+      map.removeLayer(cityLabel);
+      cityLabel = null;
+    }
     activeCity = null;
     $("#map-compare a").removeClass("highlight");
+    $('#map-compare a[data-city=""]').addClass("highlight");
     syncPickers();
     if (refit === true && fire) fitToFire(fire);
     syncHash();
@@ -413,6 +426,7 @@ $(document).ready(function () {
     }
     if (!city) return;
     if (cityLayer) map.removeLayer(cityLayer);
+    if (cityLabel) map.removeLayer(cityLabel);
     cityLayer = new L.Polygon(
       shiftRings(city.rings, city.center, fire.center),
       cityStyle,
@@ -420,6 +434,25 @@ $(document).ready(function () {
     cityLayer.on("click", function () {
       clearCity(true);
     });
+
+    /* Der Umriss allein sagt nicht, welche Stadt er zeigt. In der Liste ist der
+     * Eintrag hervorgehoben, im eingebetteten Zustand mit Auswahlfeldern steht
+     * die Antwort nur im zugeklappten Feld — und wer die Grafik als Bild
+     * weitergibt, hat gar keine Beschriftung. Die Marke sitzt an der Nordkante
+     * des Umrisses und traegt denselben Namen wie der Listeneintrag. */
+    var nord = cityLayer.getBounds().getNorth();
+    var mitte = cityLayer.getBounds().getCenter().lng;
+    cityLabel = L.marker([nord, mitte], {
+      interactive: false,
+      keyboard: false,
+      icon: L.divIcon({
+        className: "city-label",
+        html: '<span></span>',
+        iconSize: null,
+      }),
+    }).addTo(map);
+    cityLabel.getElement().querySelector("span").textContent =
+      city.label[lang] || city.label.de;
     activeCity = slug;
     syncPickers();
     $("#map-compare a").removeClass("highlight");
@@ -453,6 +486,19 @@ $(document).ready(function () {
   function buildCityButtons() {
     if (typeof _cities === "undefined") return;
     var list = $("#map-compare ul").empty();
+
+    /* Ein zweites Anklicken des aktiven Eintrags hebt den Vergleich auf — das
+     * war der einzige Weg zurueck und niemand konnte es wissen. Der Eintrag
+     * macht ihn sichtbar und deckt sich mit dem leeren Wert im Auswahlfeld. */
+    $("<li>")
+      .addClass("no-compare")
+      .append(
+        $("<a>")
+          .attr({ href: "javascript:;", "data-city": "" })
+          .text(text.noCompare),
+      )
+      .appendTo(list);
+
     _cities.forEach(function (city) {
       $("<li>")
         .append(
@@ -468,7 +514,7 @@ $(document).ready(function () {
   $(document).on("click", "#map-compare a", function (evt) {
     evt.preventDefault();
     var slug = $(this).attr("data-city");
-    if (slug === activeCity) {
+    if (!slug || slug === activeCity) {
       clearCity(true);
       return;
     }
@@ -747,6 +793,7 @@ $(document).ready(function () {
 
     $("#map-fires a").removeClass("highlight");
     $('#map-fires a[data-fire="' + fire.slug + '"]').addClass("highlight");
+    markNearestCity();
     syncPickers();
     updateScrollHints();
 
@@ -888,6 +935,37 @@ $(document).ready(function () {
     }
     showCity(slug);
   });
+
+  /* Naechstgelegene Stadt zum Brandort. Kein automatisches Einblenden: der
+   * Ausschnitt muesste dafuer beide Formen fassen und zoomte beim Laden heraus,
+   * bevor jemand den Brand gesehen hat. Stattdessen ein Vorschlag in der Liste —
+   * fuer einen Brand in der Gironde ist Bordeaux die naheliegende Bezugsgroesse,
+   * nicht der erste Eintrag der Liste.
+   *
+   * Entfernung naeherungsweise in der Ebene, mit Breitenkorrektur auf die
+   * Laengengrade. Fuer eine Reihenfolge genuegt das; eine Grosskreisrechnung
+   * wuerde an keiner Stelle zu einer anderen Wahl fuehren. */
+  function markNearestCity() {
+    if (typeof _cities === "undefined" || !fire) return;
+    var naechste = null;
+    var kuerzeste = Infinity;
+    var kos = Math.cos((fire.center[0] * Math.PI) / 180);
+    _cities.forEach(function (city) {
+      var dLat = city.center[0] - fire.center[0];
+      var dLng = (city.center[1] - fire.center[1]) * kos;
+      var d = dLat * dLat + dLng * dLng;
+      if (d < kuerzeste) {
+        kuerzeste = d;
+        naechste = city.slug;
+      }
+    });
+    $("#map-compare a").removeClass("nearest").removeAttr("title");
+    if (naechste) {
+      $('#map-compare a[data-city="' + naechste + '"]')
+        .addClass("nearest")
+        .attr("title", text.nearest);
+    }
+  }
 
   function buildFireButtons() {
     var list = $("#map-fires ul").empty();

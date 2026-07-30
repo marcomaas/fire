@@ -318,6 +318,62 @@ function testFrame(page, vp, win, doc) {
 	/* 13. Im Rahmen ist die Kopfzeile ausgeblendet — das ist gewollt, macht aber
 	 *     Prüfung 6 zur Pflicht. */
 	check(tag + ' | Rahmen erkannt', doc.documentElement.classList.contains('in-frame'));
+
+	/* 14. Der Städtevergleich ist beschriftet. Steht am Ende, weil ein Vergleich
+	 *     den Kartenausschnitt nachzieht und damit die Messungen davor
+	 *     verfälschen würde.
+	 *
+	 *     Ohne Beschriftung sagt der Umriss nicht, welche Stadt er zeigt: in der
+	 *     kompakten Darstellung steht die Antwort im zugeklappten Auswahlfeld,
+	 *     und in einem weitergegebenen Bildschirmfoto nirgends. */
+	var stadtLink = doc.querySelector('#map-compare a[data-city]:not([data-city=""])');
+	var stadtFeldEl = doc.getElementById('pick-city');
+	var stadtName = '';
+	if (felderAn && stadtFeldEl && stadtFeldEl.options.length > 1) {
+		stadtFeldEl.value = stadtFeldEl.options[1].value;
+		stadtName = stadtFeldEl.options[1].textContent;
+		stadtFeldEl.dispatchEvent(new win.Event('change', { bubbles: true }));
+	} else if (stadtLink) {
+		stadtName = stadtLink.textContent;
+		stadtLink.click();
+	}
+
+	check(tag + ' | Städtevergleich auswählbar', stadtName.length > 0);
+
+	if (stadtName) {
+		var marke = doc.querySelector('.city-label span');
+		check(tag + ' | Stadtumriss ist beschriftet',
+			!!marke && marke.textContent.trim() === stadtName.trim(),
+			marke ? 'Marke "' + marke.textContent + '" statt "' + stadtName + '"' : 'keine Marke');
+		if (marke) {
+			var mr = rect(marke);
+			check(tag + ' | Beschriftung im Sichtbereich',
+				mr.l >= -1 && mr.t >= -1 && mr.r <= view.r + 1 && mr.b <= view.b + 1,
+				'links ' + Math.round(mr.l) + ' oben ' + Math.round(mr.t) +
+				' rechts ' + Math.round(mr.r) + ' unten ' + Math.round(mr.b));
+		}
+
+		/* Die weiße Füllung darf die Brandfläche nicht ausbleichen — sie lag
+		 * vorher bei 0,35 Deckkraft genau über der Aussage des Vergleichs. */
+		var umriss = doc.querySelector('.leaflet-overlay-pane path[fill="#FFFFFF"]');
+		if (umriss) {
+			var deck = parseFloat(umriss.getAttribute('fill-opacity'));
+			check(tag + ' | Stadtumriss deckt die Brandfläche nicht ab', deck <= 0.15,
+				'Deckkraft ' + deck);
+		}
+
+		/* Und es muss einen Weg zurück geben, der nicht erraten werden muss.
+		 * Vorhanden genügt nicht — im Auswahlfeld reicht der Eintrag, in der
+		 * Liste muss er auch zu sehen sein. */
+		if (felderAn) {
+			check(tag + ' | Weg zurück ohne Vergleich vorhanden',
+				!!doc.querySelector('#pick-city option[value=""]'));
+		} else {
+			var zurueck = doc.querySelector('#map-compare li.no-compare');
+			check(tag + ' | Weg zurück ohne Vergleich sichtbar', visible(zurueck),
+				zurueck ? 'Eintrag vorhanden, aber nicht sichtbar' : 'kein Eintrag');
+		}
+	}
 }
 
 function run() {
