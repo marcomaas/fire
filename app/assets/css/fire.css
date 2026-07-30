@@ -473,12 +473,20 @@ nav#nav a:hover {
 	flex: 0 0 auto;
 }
 
-/* Der Brand-Block behaelt seine Hoehe, die Staedteliste gibt nach. Ohne das
- * wuchs der Vergleichsblock ueber die Kartenhoehe hinaus und schob sich in
- * Herkunftsangabe und Abspielknopf — auf einer 540 Pixel hohen Karte war
- * "Manhattan" nur nach unentdecktem Scrollen erreichbar.
+/* Beide Bloecke geben nach, ihre Listen scrollen bei Platzmangel in sich. Ohne
+ * das wuchs der Stapel ueber die Kartenhoehe hinaus und schob sich in
+ * Herkunftsangabe und Abspielknopf.
+ *
+ * Zuerst betraf das nur die Staedteliste — auf einer 540 Pixel hohen Karte war
+ * "Manhattan" nur nach unentdecktem Scrollen erreichbar. Mit dem fuenften Brand
+ * traf es dann auch den Auswahlblock: er wuchs mit jedem Eintrag und schob den
+ * Vergleichsblock nach unten. Da die Liste der Braende weiter waechst, geben
+ * jetzt beide nach.
+ *
  * min-height: 0 ist dabei entscheidend: ohne diese Angabe schrumpft ein
- * Flex-Element nicht unter die Hoehe seines Inhalts. */
+ * Flex-Element nicht unter die Hoehe seines Inhalts, und die ganze Regel bleibt
+ * wirkungslos. */
+#map-fires,
 #map-compare {
 	flex: 0 1 auto;
 	min-height: 0;
@@ -486,6 +494,13 @@ nav#nav a:hover {
 	flex-direction: column;
 }
 
+/* Der Auswahlblock darf etwas mehr Platz behalten als die Staedteliste — er
+ * traegt die Hauptnavigation der Anwendung. */
+#map-fires {
+	flex-shrink: 0.5;
+}
+
+#map-fires ul,
 #map-compare ul {
 	overflow-y: auto;
 	min-height: 0;

@@ -76,6 +76,19 @@ FIRES = [
         "region_en": "Plana Baixa, Castellon province, north of Valencia",
         "timezone_label": "CEST",
     },
+    {
+        # Aelter als die uebrigen: Ereignis am 12.07.2026, Kartierung
+        # abgeschlossen. Damit der erste Brand im Bestand, bei dem die Anwendung
+        # den Zustand "abgeschlossen" anzeigt statt "laeuft weiter".
+        "slug": "fontainebleau",
+        "activation": "EMSR894",
+        "aoi": 1,
+        "name_de": "Fontainebleau, Frankreich",
+        "name_en": "Fontainebleau, France",
+        "region_de": "Seine-et-Marne, sued-oestlich von Paris",
+        "region_en": "Seine-et-Marne, south-east of Paris",
+        "timezone_label": "CEST",
+    },
 ]
 
 # Beobachtet, aber noch nicht aufgenommen: EMSR906 "Wildfires in Province of
@@ -382,7 +395,12 @@ def build_fire(config):
             continue
 
         product = item["product"]
-        label = f"MONIT{product['monitoringNumber']}" if product.get("monitoring") else product.get("type", "DEL")
+        # Der Produkttyp gehoert in die Beschriftung: die Monitoring-Nummern
+        # werden je Typ gezaehlt, nicht fortlaufend. Bei Fontainebleau tragen
+        # deshalb zwei verschiedene Staende beide die Nummer 1 — ohne den Typ
+        # waeren sie in der Anzeige nicht unterscheidbar.
+        typ = product.get("type", "DEL")
+        label = f"{typ} MONIT{product['monitoringNumber']}" if product.get("monitoring") else typ
         steps.append(
             {
                 "acquired": item["acquired"],
