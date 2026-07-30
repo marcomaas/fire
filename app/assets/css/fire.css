@@ -493,10 +493,22 @@ nav#nav a:hover {
 	flex-direction: column;
 }
 
-/* Der Auswahlblock darf etwas mehr Platz behalten als die Staedteliste — er
- * traegt die Hauptnavigation der Anwendung. */
+/* Der Auswahlblock gibt zuletzt nach. Vorher schrumpfte er proportional mit
+ * (flex-shrink: 0.5), und auf einer 540 Pixel hohen Karte fiel der fuenfte Brand
+ * unter die Kante, obwohl die Staedteliste daneben 233 Pixel belegte. Gemessen:
+ * 4 von 5 Braenden sichtbar bei 960x540, 2 von 5 bei 420x380.
+ *
+ * Jetzt bekommt der Auswahlblock so viel Hoehe wie sein Inhalt braucht, gedeckelt
+ * auf die Haelfte des Stapels, damit er die Staedteliste nicht auf einen Schlitz
+ * zusammendrueckt. Alles Uebrige geht an die Staedteliste. Welcher Brand gezeigt
+ * wird, ist die Hauptentscheidung — welche Stadt daneben liegt, die zweite. */
 #map-fires {
-	flex-shrink: 0.5;
+	flex-shrink: 0;
+	max-height: 50%;
+}
+
+#map-compare {
+	flex: 1 1 auto;
 }
 
 #map-fires ul,
