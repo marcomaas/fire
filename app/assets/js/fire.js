@@ -387,13 +387,17 @@ $(document).ready(function () {
     });
   }
 
-  function clearCity() {
+  /* refit nur bei einer Handlung des Nutzers. Beim Brandwechsel raeumt
+   * selectFire ohnehin auf und setzt den Ausschnitt danach selbst — ein
+   * zusaetzliches Zoomen dazwischen waere ein sichtbares Zucken. */
+  function clearCity(refit) {
     if (cityLayer) {
       map.removeLayer(cityLayer);
       cityLayer = null;
     }
     activeCity = null;
     $("#map-compare a").removeClass("highlight");
+    if (refit === true && fire) fitToFire(fire);
     syncHash();
   }
 
@@ -408,11 +412,36 @@ $(document).ready(function () {
       shiftRings(city.rings, city.center, fire.center),
       cityStyle,
     ).addTo(map);
-    cityLayer.on("click", clearCity);
+    cityLayer.on("click", function () {
+      clearCity(true);
+    });
     activeCity = slug;
     $("#map-compare a").removeClass("highlight");
     $('#map-compare a[data-city="' + slug + '"]').addClass("highlight");
+
+    /* Ausschnitt so setzen, dass Brand UND Stadtumriss hineinpassen. Ohne das
+     * ist der Vergleich bei kleinen Bränden unsichtbar: die Karte steht auf der
+     * Brandfläche, und ein größerer Stadtumriss liegt komplett außerhalb.
+     * Aufgefallen bei Fontainebleau — 9,24 km² Brand gegen 105 km² Paris, der
+     * Umriss war da, aber nirgends zu sehen.
+     *
+     * Das Nachziehen des Ausschnitts ist hier erwünscht: einen Vergleich
+     * auszuwählen ist eine ausdrückliche Handlung, und die Antwort darauf ist,
+     * ihn zu zeigen. */
+    fitToComparison();
     syncHash();
+  }
+
+  /* Ausschnitt über Brand und aktiven Stadtumriss. Ohne aktiven Vergleich fällt
+   * es auf den Brand allein zurück. Weniger Rand als bei der Brandansicht, weil
+   * hier zwei Formen hineinmüssen. */
+  function fitToComparison() {
+    if (!fire) return;
+    fitSafely(function () {
+      var b = fireBounds(fire);
+      if (cityLayer) b.extend(cityLayer.getBounds());
+      return b;
+    }, 0.12);
   }
 
   function buildCityButtons() {
@@ -434,7 +463,7 @@ $(document).ready(function () {
     evt.preventDefault();
     var slug = $(this).attr("data-city");
     if (slug === activeCity) {
-      clearCity();
+      clearCity(true);
       return;
     }
     showCity(slug);
@@ -637,34 +666,52 @@ $(document).ready(function () {
    * Rechnung eine Stufe unterhalb von minZoom, und Leaflet zeigt statt des
    * Brandes halb Europa. Trat bei 470 Pixel breiten Rahmen zuverlässig auf,
    * während die Vollbildansicht unauffällig blieb. */
-  function fitToFire(f, attempt) {
-    var last = f.steps[f.steps.length - 1];
-    var viewBounds = new L.LatLngBounds(last.polygon);
-    (last.others || []).forEach(function (ring) {
-      viewBounds.extend(new L.LatLngBounds(ring));
-    });
-
+  /* Setzt einen Ausschnitt und wartet, bis der Container eine brauchbare Größe
+   * hat. Der Wiederholversuch ist zwingend: fitBounds berechnet die Zoomstufe
+   * aus der Containergröße, und in einem gerade eingefügten iframe steht die
+   * noch nicht fest. Die Rechnung ergibt dann eine Stufe unterhalb von minZoom,
+   * und statt des Motivs ist halb Europa zu sehen. */
+  function fitSafely(getBounds, padding, attempt) {
     map.invalidateSize(false);
 
     var size = map.getSize();
     if ((size.x < 60 || size.y < 60) && (attempt || 0) < 12) {
       setTimeout(function () {
-        fitToFire(f, (attempt || 0) + 1);
+        fitSafely(getBounds, padding, (attempt || 0) + 1);
       }, 60);
       return;
     }
 
-    map.fitBounds(viewBounds.pad(0.35));
+    var b = getBounds();
+    if (b && b.isValid()) map.fitBounds(b.pad(padding));
+  }
+
+  function fireBounds(f) {
+    var last = f.steps[f.steps.length - 1];
+    var b = new L.LatLngBounds(last.polygon);
+    (last.others || []).forEach(function (ring) {
+      b.extend(new L.LatLngBounds(ring));
+    });
+    return b;
+  }
+
+  function fitToFire(f) {
+    fitSafely(function () {
+      return fireBounds(f);
+    }, 0.35);
   }
 
   /* Ändert sich die Rahmengröße nachträglich — Drehen eines Telefons, ein
-   * aufklappendes Layout —, passt der Ausschnitt sonst nicht mehr. */
+   * aufklappendes Layout —, passt der Ausschnitt sonst nicht mehr. Ist ein
+   * Vergleich eingeblendet, bleibt er im Bild. */
   var resizeTimer = null;
   $(window).on("resize", function () {
     if (resizeTimer) clearTimeout(resizeTimer);
     resizeTimer = setTimeout(function () {
       resizeTimer = null;
-      if (fire) fitToFire(fire);
+      if (!fire) return;
+      if (cityLayer) fitToComparison();
+      else fitToFire(fire);
     }, 250);
   });
 
@@ -793,7 +840,7 @@ $(document).ready(function () {
       if (target.city) {
         showCity(target.city);
       } else {
-        clearCity();
+        clearCity(true);
       }
     }
   });
