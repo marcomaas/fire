@@ -5,11 +5,11 @@ Copyright (c) 2026 Datenfreunde GmbH
 
 Die Fassung von 2013 (Yosemite Rim Fire) stammt von OpenDataCity. Die Fassung von
 2026 — Datenquelle, Kartengrundlage, Gestaltung, Zeitstrahl, Tests — von den
-Datenfreunden. Der Ueberblend-Algorithmus in app/assets/js/polymorph.js ist
-unveraendert aus der Fassung von 2013 uebernommen.
+Datenfreunden. Der Überblend-Algorithmus in app/assets/js/polymorph.js ist
+unverändert aus der Fassung von 2013 übernommen.
 
 Die Daten selbst stehen NICHT unter dieser Lizenz. Brandperimeter: Copernicus EMS
-Rapid Mapping, (c) Europaeische Union. Stadtgrenzen: OpenStreetMap-Mitwirkende,
+Rapid Mapping, (c) Europäische Union. Stadtgrenzen: OpenStreetMap-Mitwirkende,
 ODbL. Reliefkarte: Esri.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

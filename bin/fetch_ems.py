@@ -62,7 +62,7 @@ FIRES = [
         "aoi": 1,
         "name_de": "Biscarrosse, Frankreich",
         "name_en": "Biscarrosse, France",
-        "region_de": "Landes, sued-westliche Atlantikkueste",
+        "region_de": "Landes, südwestliche Atlantikküste",
         "region_en": "Landes, south-western Atlantic coast",
         "timezone_label": "CEST",
     },
@@ -72,8 +72,8 @@ FIRES = [
         "aoi": 1,
         "name_de": "Artana, Spanien",
         "name_en": "Artana, Spain",
-        "region_de": "Plana Baixa, Provinz Castellon, noerdlich von Valencia",
-        "region_en": "Plana Baixa, Castellon province, north of Valencia",
+        "region_de": "Plana Baixa, Provinz Castellón, nördlich von Valencia",
+        "region_en": "Plana Baixa, Castellón province, north of Valencia",
         "timezone_label": "CEST",
     },
     {
@@ -85,7 +85,7 @@ FIRES = [
         "aoi": 1,
         "name_de": "Fontainebleau, Frankreich",
         "name_en": "Fontainebleau, France",
-        "region_de": "Seine-et-Marne, sued-oestlich von Paris",
+        "region_de": "Seine-et-Marne, südöstlich von Paris",
         "region_en": "Seine-et-Marne, south-east of Paris",
         "timezone_label": "CEST",
     },
@@ -419,7 +419,7 @@ def build_fire(config):
             f"{result['total_ha']:>9,.0f} ha  "
             f"groesste={result['largest_ha']:>9,.0f} ha ({result['largest_share'] * 100:>4.0f}%)  "
             f"Teile={result['parts']:>5d}  "
-            f"Stuetzpunkte={len(result['ring']):>4d} (roh {result['raw_vertices']})",
+            f"Stützpunkte={len(result['ring']):>4d} (roh {result['raw_vertices']})",
             flush=True,
         )
         if result["dropped_parts"]:
@@ -486,7 +486,7 @@ def discover(look_back=14, miss_limit=8):
     highest = max(int(c["activation"].removeprefix("EMSR")) for c in FIRES)
 
     start = highest - look_back
-    print(f"Suche ab EMSR{start}, Abbruch nach {miss_limit} Fehlschlaegen in Folge.\n")
+    print(f"Suche ab EMSR{start}, Abbruch nach {miss_limit} Fehlschlägen in Folge.\n")
 
     candidates = []
     number = start
@@ -558,12 +558,12 @@ def discover(look_back=14, miss_limit=8):
         if blocked_at:
             # Kein grünes Signal ohne sichtbaren Geltungsbereich: eine abgewiesene
             # Suche darf nicht wie eine erfolglose aussehen.
-            print("Bis zum Abbruch keine neuen darstellbaren Waldbraende gefunden.")
+            print("Bis zum Abbruch keine neuen darstellbaren Waldbrände gefunden.")
             return 2
-        print("Keine neuen darstellbaren Waldbraende gefunden.")
+        print("Keine neuen darstellbaren Waldbrände gefunden.")
         return 1
 
-    print(f"{len(candidates)} Kandidat(en) fuer die Liste FIRES in bin/fetch_ems.py:\n")
+    print(f"{len(candidates)} Kandidat(en) für die Liste FIRES in bin/fetch_ems.py:\n")
     for c in candidates:
         slug = str(c["aoi_name"] or c["code"]).lower().replace(" ", "-")
         print(
@@ -573,7 +573,7 @@ def discover(look_back=14, miss_limit=8):
             f'        "aoi": {c["aoi"]},\n'
             f'        "name_de": "{c["aoi_name"]}, LAND",\n'
             f'        "name_en": "{c["aoi_name"]}, COUNTRY",\n'
-            f'        "region_de": "{c["name"]} — Region ergaenzen",\n'
+            f'        "region_de": "{c["name"]} — Region ergänzen",\n'
             f'        "region_en": "{c["name"]} — add region",\n'
             '        "timezone_label": "CEST",\n'
             "    },"
@@ -675,7 +675,7 @@ def report_status(configs):
         print(f"{fresh_total} neue Aufnahme(n) - voller Lauf sinnvoll.")
         return 0
     if any_open:
-        print("Keine neuen Aufnahmen, Kartierung laeuft aber weiter - morgen erneut pruefen.")
+        print("Keine neuen Aufnahmen, Kartierung läuft aber weiter - morgen erneut prüfen.")
         return 1
     print("Alle Aktivierungen abgeschlossen und nichts Neues - die Automatik kann ruhen.")
     return 1
@@ -709,7 +709,7 @@ def main():
             fires.append(fire)
 
     if not fires:
-        print("Keine Daten geholt - Ausgabe unveraendert gelassen.", file=sys.stderr)
+        print("Keine Daten geholt - Ausgabe unverändert gelassen.", file=sys.stderr)
         return 1
 
     # Wurde nur eine Auswahl geholt, bleiben die uebrigen Braende aus der letzten
@@ -726,7 +726,7 @@ def main():
         fires = [merged[s] for s in order if s in merged]
         kept = [s for s in merged if s not in fresh]
         if kept:
-            print(f"\nUnveraendert uebernommen: {', '.join(kept)}")
+            print(f"\nUnverändert übernommen: {', '.join(kept)}")
 
     OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     OUT_FILE.write_text(
@@ -737,7 +737,7 @@ def main():
 
     total_steps = sum(len(f["steps"]) for f in fires)
     size_kb = OUT_FILE.stat().st_size / 1024
-    print(f"\n{OUT_FILE.relative_to(ROOT)}: {len(fires)} Braende, {total_steps} Zeitschnitte, {size_kb:.0f} KB")
+    print(f"\n{OUT_FILE.relative_to(ROOT)}: {len(fires)} Brände, {total_steps} Zeitschnitte, {size_kb:.0f} KB")
     return 0
 
 

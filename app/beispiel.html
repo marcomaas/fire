@@ -17,7 +17,6 @@
 			--color-black: #262626;
 			--color-yellow: #f2c029;
 			--color-blue: #65768c;
-			--color-brown: #a69485;
 			--color-white: #ffffff;
 			--color-grey: #cccccc;
 			--font-headline: 'Archivo', sans-serif;
@@ -172,6 +171,13 @@
 	</p>
 
 	<p>
+		Gezeigt wird eine Auswahl: <span id="count-words">mehrere</span> Brände, für die Copernicus
+		eine Kartierung mit mindestens zwei Zeitschnitten veröffentlicht hat. Es brennt in Europa an
+		mehr Orten. Wer die Auswahl im eigenen Artikel weiter einschränken will, findet die
+		Konfiguration in der <a href="index-de.html" target="_blank">vollständigen Anwendung</a>.
+	</p>
+
+	<p>
 		Der Zeitstrahl unter der Flächenangabe ist zeitproportional: Das Dreieck links markiert den
 		gemeldeten Brandausbruch, der schraffierte Abschnitt die Zeit bis zur ersten
 		Satellitenaufnahme, und jeder senkrechte Strich eine Aufnahme. Damit ist auf einen Blick
@@ -185,13 +191,14 @@
 		<span class="meta">960 × 540 · für die Textbreite eines Artikels</span>
 	</h2>
 	<p>
-		Der Regelfall. Bei dieser Breite haben Auswahlliste, Größenvergleich und Zeitanzeige
-		gleichzeitig Platz, ohne sich zu überlagern.
+		Der Regelfall. Bei dieser Breite stehen Auswahlliste, Größenvergleich und Zeitanzeige
+		nebeneinander, ohne sich zu überlagern. Reicht die Höhe für die Liste nicht aus, lässt sie
+		sich scrollen.
 	</p>
 	<iframe class="demo" src="index-de.html#gironde/bordeaux" width="960" height="540"
 		title="Waldbrände in Frankreich und Spanien, Querformat" loading="lazy"></iframe>
-<pre>&lt;iframe src="https://apps.datenfreunde.com/" width="960" height="540"
-        style="border:0" loading="lazy"
+<pre>&lt;iframe src="https://apps.datenfreunde.com/#gironde/bordeaux"
+        width="960" height="540" style="border:0" loading="lazy"
         title="Waldbrände in Frankreich und Spanien"&gt;&lt;/iframe&gt;</pre>
 
 	<h2>
@@ -202,14 +209,14 @@
 		Unter 720 Pixel Breite rücken die Auswahlblöcke schmaler zusammen, und Zustandsanzeige
 		und Abspielknopf teilen sich die untere Kante. Der Größenvergleich bleibt bedienbar, die
 		Karte bekommt aber deutlich weniger Fläche — für einen einzelnen Brand mit gesetztem
-		Anker ist das Format brauchbar, für die Umschaltung zwischen vier Bränden eher eng.
+		Anker ist das Format brauchbar, für die Umschaltung zwischen <span id="count-fires">allen</span> Bränden eher eng.
 	</p>
 
 	<div class="demo-row">
 		<div>
 			<iframe class="demo" src="index-de.html#central-spain/madrid" width="400" height="720"
 				title="Waldbrände in Frankreich und Spanien, Hochformat" loading="lazy"></iframe>
-<pre>&lt;iframe src="https://apps.datenfreunde.com/#central-spain"
+<pre>&lt;iframe src="https://apps.datenfreunde.com/#central-spain/madrid"
         width="400" height="720" style="border:0" loading="lazy"
         title="Waldbrände in Frankreich und Spanien"&gt;&lt;/iframe&gt;</pre>
 		</div>
@@ -223,13 +230,7 @@
 				gezielt öffnen, was zum Artikel passt — auch gleich mit eingeblendetem
 				Stadtvergleich.
 			</p>
-<pre>#gironde              Gironde, Frankreich
-#central-spain        La Atalaya, Spanien
-#biscarrosse          Biscarrosse, Frankreich
-#artana               Artana bei Valencia
-
-#gironde/bordeaux     mit Stadtumriss
-#central-spain/madrid mit Stadtumriss</pre>
+<pre id="anchor-list">Liste wird aus den Daten erzeugt.</pre>
 			<p class="hint">
 				Das linke Beispiel nutzt <code>#central-spain/madrid</code> — deshalb liegt der
 				Umriss von Madrid schon beim Laden über der Brandfläche.
@@ -251,7 +252,7 @@
 			title="Waldbrände in Frankreich und Spanien, mitwachsend" loading="lazy"></iframe>
 	</div>
 <pre>&lt;div style="aspect-ratio: 16/9; max-width: 960px;"&gt;
-  &lt;iframe src="https://apps.datenfreunde.com/"
+  &lt;iframe src="https://apps.datenfreunde.com/#artana"
           style="width:100%;height:100%;border:0" loading="lazy"
           title="Waldbrände in Frankreich und Spanien"&gt;&lt;/iframe&gt;
 &lt;/div&gt;</pre>
@@ -260,14 +261,15 @@
 		<strong>Hinweise für die Einbettung.</strong>
 		Im Rahmen wird die Kopfzeile automatisch ausgeblendet, damit die Grafik nicht mit der
 		Seitennavigation der einbettenden Seite kollidiert. Die englische Fassung liegt unter
-		<code>/index-en.html</code>. Die Grafik lädt keine Zähldienste und setzt keine Cookies,
-		ein Einwilligungsbanner ist dafür also nicht nötig. Empfohlene Mindesthöhe: 420 Pixel —
-		darunter überlagern sich Zustandsanzeige und Abspielknopf.
+		<code>/index-en.html</code>. Die Grafik bindet selbst keine Zähldienste ein und setzt keine
+		eigenen Cookies; die Kartenkacheln kommen allerdings von Esri, das damit die IP-Adresse des
+		Abrufs erfährt — ob daraus eine Einwilligungspflicht folgt, entscheidet die einbettende
+		Seite. Getestet ist das Layout ab 420 × 380 Pixel; darunter wird es nicht mehr geprüft.
 	</div>
 
 	<footer class="page">
-		Anwendung unter <a href="https://creativecommons.org/licenses/by/3.0/deed.de" target="_blank" rel="noopener">CC BY 3.0</a>,
-		nach einer Arbeit von <a href="https://github.com/opendatacity/fire" target="_blank" rel="noopener">OpenDataCity</a> (2013).
+		Programmcode unter <a href="https://github.com/marcomaas/fire/blob/master/LICENSE" target="_blank" rel="noopener">MIT-Lizenz</a>
+		— die Daten stehen unter ihren eigenen Lizenzen, siehe unten. Nach einer Arbeit von <a href="https://github.com/opendatacity/fire" target="_blank" rel="noopener">OpenDataCity</a> (2013).
 		Brandumrisse: Copernicus EMS Rapid Mapping, © Europäische Union.
 		Stadtgrenzen: OpenStreetMap und Mitwirkende, ODbL. Reliefkarte: Esri.<br>
 		Quellcode: <a href="https://github.com/marcomaas/fire" target="_blank" rel="noopener">github.com/marcomaas/fire</a><br>
@@ -275,5 +277,44 @@
 	</footer>
 
 </div>
+
+<!-- Ankerliste und Anzahl kommen aus denselben Daten wie die Grafik. Vorher standen
+     beide als Text in dieser Seite und waren beim fünften Brand still falsch. -->
+<script src="assets/data/fires.js"></script>
+<script src="assets/data/cities.js"></script>
+<script>
+	(function () {
+		if (typeof _fires === "undefined" || !_fires.length) return;
+
+		var zahlwort = ["kein", "ein", "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun"];
+		var wort = _fires.length < zahlwort.length ? zahlwort[_fires.length] : String(_fires.length);
+		var byId = function (id) { return document.getElementById(id); };
+		if (byId("count-words")) byId("count-words").textContent = wort;
+		if (byId("count-fires")) byId("count-fires").textContent = wort;
+
+		var list = byId("anchor-list");
+		if (!list) return;
+
+		var breite = 0;
+		_fires.forEach(function (f) {
+			breite = Math.max(breite, ("#" + f.slug).length);
+		});
+
+		var zeilen = _fires.map(function (f) {
+			var anker = "#" + f.slug;
+			return anker + new Array(breite - anker.length + 3).join(" ") + f.name.de;
+		});
+
+		/* Ein Beispiel mit Stadtumriss, damit die Schreibweise erkennbar ist —
+		   Stadt aus den Städtedaten, nicht als Name hier hineingeschrieben. */
+		if (typeof _cities !== "undefined" && _cities.length) {
+			var beispiel = "#" + _fires[0].slug + "/" + _cities[0].slug;
+			zeilen.push("");
+			zeilen.push(beispiel + new Array(Math.max(1, breite + 3 - beispiel.length)).join(" ") + "mit Stadtumriss");
+		}
+
+		list.textContent = zeilen.join("\n");
+	})();
+</script>
 </body>
 </html>

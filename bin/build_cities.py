@@ -131,7 +131,7 @@ def main():
             }
         )
         points = sum(len(r) for r in rings)
-        print(f"  {city['slug']:11s} Ringe={len(rings):2d}  Stuetzpunkte={points:5d}  ({source})")
+        print(f"  {city['slug']:11s} Ringe={len(rings):2d}  Stützpunkte={points:5d}  ({source})")
 
     if not out:
         print("Keine Stadt verarbeitet.", file=sys.stderr)
