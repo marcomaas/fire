@@ -4,7 +4,22 @@
   "buildCommand": null,
   "installCommand": null,
   "outputDirectory": null,
+  "redirects": [
+    {
+      "source": "/fire",
+      "destination": "/fire/",
+      "permanent": false
+    }
+  ],
   "rewrites": [
+    {
+      "source": "/fire/",
+      "destination": "/app/index-de.html"
+    },
+    {
+      "source": "/fire/(.*)",
+      "destination": "/app/$1"
+    },
     {
       "source": "/",
       "destination": "/app/index-de.html"
