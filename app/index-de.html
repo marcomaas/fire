@@ -85,54 +85,93 @@
 			<p>
 				Die rote Fläche ist das kartierte Brandgebiet, wie es der
 				<a href="https://mapping.emergency.copernicus.eu/" target="_blank" rel="noopener">Copernicus Emergency Management Service</a>
-				aus Satellitenaufnahmen ausgewertet hat. Der Verlauf springt von einer Aufnahme zur nächsten und
-				zeigt so, wie sich das Feuer über die Tage ausgedehnt hat. Der weiße Umriss legt zum Vergleich
-				eine Stadt an denselben Ort — flächentreu, damit die Größenordnung unmittelbar ablesbar wird.
+				aus Satellitenaufnahmen ausgewertet hat. Der Verlauf geht von einer Aufnahme zur nächsten
+				und zeigt, wie sich das kartierte Gebiet über die Tage verändert hat. Der eingeblendete
+				Umriss legt zum Vergleich eine Stadt an denselben Ort — flächentreu, damit die
+				Größenordnung unmittelbar ablesbar wird.
+			</p>
+			<p>
+				Gezeigt wird eine <strong>Auswahl</strong>: <span id="info-count">fünf</span> Brände, für
+				die Copernicus eine Kartierung mit mindestens zwei Zeitschnitten veröffentlicht hat. Es
+				brennt in Europa an mehr Orten, als hier zu sehen sind.
 			</p>
 
 			<h3>Wie die Angaben zu lesen sind</h3>
 			<dl>
 				<dt>Zeitangabe</dt>
-				<dd>Aufnahmezeitpunkt der zugrunde liegenden Satellitenszene, nicht der Zeitpunkt der Veröffentlichung.</dd>
+				<dd>Aufnahmezeitpunkt der zugrunde liegenden Satellitenszene, nicht der Zeitpunkt der Veröffentlichung. Alle Zeiten in mitteleuropäischer Sommerzeit.</dd>
 
 				<dt>Zeitstrahl</dt>
 				<dd>
 					Die Achse ist zeitproportional und beginnt beim gemeldeten Brandausbruch (Dreieck),
 					nicht bei der ersten Aufnahme. Der <strong>schraffierte Abschnitt</strong> ist die Zeit
 					zwischen Ausbruch und erster Satellitenaufnahme — dort liegt keine Kartierung vor, die
-					Animation kann diesen Zeitraum nicht zeigen. Je nach Brand sind das 21 bis 106 Stunden.
-					Jeder senkrechte Strich ist eine Aufnahme; die Abstände zeigen, wie dicht kartiert
-					wurde. Auch die Abspielgeschwindigkeit folgt diesen Abständen.
+					Animation kann diesen Zeitraum nicht zeigen. Je nach Brand sind das
+					<span id="info-delay-span">mehrere Stunden bis Tage</span>. Jeder senkrechte Strich ist
+					eine Aufnahme; die Abstände zeigen, wie dicht kartiert wurde. Auch die
+					Abspielgeschwindigkeit folgt diesen Abständen.
 				</dd>
 
-				<dt>Bewegung zwischen zwei Aufnahmen</dt>
-				<dd>Linear interpoliert. Das ist eine Darstellungshilfe: Was zwischen zwei Überflügen genau geschah, ist aus diesen Daten nicht bekannt.</dd>
+				<dt>Zwischen zwei Aufnahmen</dt>
+				<dd>
+					Zeitangabe und Flächenzahl werden linear fortgeschrieben. Das ist eine
+					Darstellungshilfe, keine Messung: Was zwischen zwei Überflügen geschah, ist aus diesen
+					Daten nicht bekannt.
+				</dd>
 
 				<dt>Flächenangabe</dt>
-				<dd>Summe aller kartierten Teilflächen des jeweiligen Standes. Animiert wird die größte zusammenhängende Fläche, die übrigen Teilflächen liegen blasser daneben.</dd>
+				<dd>
+					Summe aller kartierten Teilflächen des jeweiligen Standes. Wie die Veränderung gezeigt
+					wird, hängt vom Brand ab: Dominiert eine zusammenhängende Fläche, wird ihr Umriss von
+					Stand zu Stand übergeblendet. Zerfällt der Brand in viele getrennte Flecken, wird
+					stattdessen jeder Stand vollständig eingeblendet und bleibt liegen — ein Überblenden
+					würde dort Stillstand vortäuschen, während die Gesamtfläche wächst. Derzeit trifft der
+					zweite Fall auf die Mehrzahl der Brände zu.
+				</dd>
+
+				<dt>Wenn die Fläche sinkt</dt>
+				<dd>
+					Das kommt vor. Verbrannte Fläche verschwindet nicht wieder, die <em>kartierte</em>
+					aber schon: Ein späterer Stand grenzt genauer ab und nimmt vorher mitgezählte
+					unverbrannte Inseln heraus. Die Zahl kann deshalb fallen, während das rote Gebiet im
+					Bild unverändert bleibt.
+				</dd>
 
 				<dt>Städtevergleich</dt>
-				<dd>Der Umriss wird an den Brandort verschoben und dabei in seiner tatsächlichen Fläche belassen. Weil ein Längengrad in höheren Breiten kürzer ist, wird die Ost-West-Ausdehnung entsprechend korrigiert.</dd>
+				<dd>
+					Der Umriss wird an den Brandort verschoben und behält dabei seine
+					<strong>Fläche</strong> — nicht seine Form. Weil ein Längengrad in höheren Breiten
+					kürzer ist, wird die Ost-West-Ausdehnung korrigiert; bei weit entfernten Städten
+					staucht das den Umriss um mehr als ein Fünftel. Er taugt als Flächenmaßstab, nicht als
+					Stadtgrundriss.
+				</dd>
 			</dl>
 
 			<h3>Quellen und Lizenzen</h3>
 			<p>
 				Brandumrisse: Copernicus EMS Rapid Mapping, © Europäische Union.<br>
-				Stadtgrenzen: <a href="https://openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> und Mitwirkende, ODbL.<br>
+				Stadtgrenzen: <a href="https://openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende, ODbL.<br>
 				Reliefkarte: <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>.
 			</p>
 			<p>
-				Diese Anwendung steht unter <a href="https://creativecommons.org/licenses/by/3.0/deed.de" target="_blank" rel="noopener">CC BY 3.0</a>.
-				Quellcode: <a href="https://github.com/marcomaas/fire" target="_blank" rel="noopener">github.com/marcomaas/fire</a>.
+				Der Programmcode dieser Anwendung steht unter der
+				<a href="https://github.com/marcomaas/fire/blob/master/LICENSE" target="_blank" rel="noopener">MIT-Lizenz</a>,
+				Quellcode auf <a href="https://github.com/marcomaas/fire" target="_blank" rel="noopener">github.com/marcomaas/fire</a>.
+				Die <strong>Daten</strong> stehen unter ihren eigenen Lizenzen, siehe oben — sie folgen
+				nicht der Lizenz des Codes.
 			</p>
 			<p>
 				Sie beruht auf der Arbeit <em>Yosemite Rim Fire</em> von
 				<a href="https://github.com/opendatacity/fire" target="_blank" rel="noopener">OpenDataCity</a> (2013).
-				Die Überblend-Animation stammt unverändert aus jener Fassung; Datenquelle, Kartengrundlage und
-				Gestaltung wurden 2026 erneuert, weil die damaligen Dienste abgeschaltet worden sind.
+				Der Algorithmus für das Überblenden der Umrisse stammt unverändert aus jener Fassung.
+				Datenquelle, Kartengrundlage, Gestaltung, Zeitstrahl und die zweite Darstellungsart sind
+				2026 entstanden, weil die damaligen Dienste abgeschaltet worden sind.
 			</p>
 			<p>
-				Diese Seite bindet keine Zähldienste ein und setzt keine Cookies.
+				Diese Seite bindet keine Zähldienste ein und setzt selbst keine Cookies. Die
+				Kartenkacheln werden allerdings von <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>
+				geladen — dabei erfährt ein Dritter die IP-Adresse des Abrufs. Ob daraus eine
+				Einwilligungspflicht folgt, ist eine Frage für die einbettende Seite, nicht für uns.
 			</p>
 			<p>
 				Herausgeber und verantwortlich für den Inhalt:

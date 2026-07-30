@@ -92,6 +92,7 @@ $(document).ready(function () {
         return n === 1 ? "1 Stunde" : n + " Stunden";
       },
       stillOpen: "Kartierung läuft weiter",
+      rangeJoin: " bis ",
     },
     en: {
       dateFormat: "YYYY-MM-DD HH:mm",
@@ -140,6 +141,7 @@ $(document).ready(function () {
         return n === 1 ? "1 hour" : n + " hours";
       },
       stillOpen: "Mapping ongoing",
+      rangeJoin: " to ",
     },
   }[lang];
 
@@ -756,6 +758,62 @@ $(document).ready(function () {
     play();
   }
 
+  /* Füllt die Zahlen im Info-Kasten aus den Daten. Vorher standen dort feste
+   * Werte — die Spanne "21 bis 106 Stunden" stammte aus der Zeit mit vier
+   * Bränden und war mit dem fünften falsch, ohne dass es auffiel. Was sich mit
+   * den Daten ändert, darf nicht im Text festgeschrieben stehen. */
+  function fillInfoFigures() {
+    var zahlwort = {
+      de: [
+        "kein",
+        "ein",
+        "zwei",
+        "drei",
+        "vier",
+        "fünf",
+        "sechs",
+        "sieben",
+        "acht",
+        "neun",
+      ],
+      en: [
+        "no",
+        "one",
+        "two",
+        "three",
+        "four",
+        "five",
+        "six",
+        "seven",
+        "eight",
+        "nine",
+      ],
+    }[lang];
+    var n = _fires.length;
+    $("#info-count").text(n < zahlwort.length ? zahlwort[n] : String(n));
+
+    /* Verzug zwischen gemeldetem Ausbruch und erster Aufnahme, über alle Brände. */
+    var verzuege = _fires
+      .filter(function (f) {
+        return f.event_time;
+      })
+      .map(function (f) {
+        return at(f.steps[0].acquired) - at(f.event_time);
+      })
+      .filter(function (ms) {
+        return ms > 0;
+      });
+
+    if (!verzuege.length) return;
+    var min = Math.min.apply(null, verzuege);
+    var max = Math.max.apply(null, verzuege);
+    $("#info-delay-span").text(
+      min === max
+        ? describeSpan(min)
+        : describeSpan(min) + text.rangeJoin + describeSpan(max),
+    );
+  }
+
   function buildFireButtons() {
     var list = $("#map-fires ul").empty();
     _fires.forEach(function (item) {
@@ -819,6 +877,7 @@ $(document).ready(function () {
 
   buildFireButtons();
   buildCityButtons();
+  fillInfoFigures();
 
   if (window.top !== window) $("html").addClass("in-frame");
 

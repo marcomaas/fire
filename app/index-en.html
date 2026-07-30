@@ -85,34 +85,43 @@
 			<p>
 				The red area is the mapped burnt area as assessed from satellite imagery by the
 				<a href="https://mapping.emergency.copernicus.eu/" target="_blank" rel="noopener">Copernicus Emergency Management Service</a>.
-				The sequence moves from one acquisition to the next, showing how the fire expanded over the
-				days. The white outline places a city at the same location for comparison, preserving its true
-				area so the order of magnitude becomes directly legible.
+				The sequence moves from one acquisition to the next, showing how the mapped area changed
+					over the days. The overlaid outline places a city at the same location for comparison,
+					preserving its true area so the order of magnitude becomes directly legible.
+			</p>
+			<p>
+					This is a <strong>selection</strong>: <span id=\"info-count\">five</span> fires for which
+					Copernicus has published a mapping with at least two acquisitions. More of Europe is
+					burning than is shown here.
 			</p>
 
 			<h3>How to read the figures</h3>
 			<dl>
 				<dt>Timestamp</dt>
-				<dd>Acquisition time of the underlying satellite scene, not the time of publication.</dd>
+				<dd>Acquisition time of the underlying satellite scene, not the time of publication. All times in Central European Summer Time.</dd>
 
 				<dt>Timeline</dt>
 				<dd>
 					The axis is proportional to real time and starts at the reported outbreak (triangle),
 					not at the first acquisition. The <strong>hatched section</strong> is the interval
 					between outbreak and first satellite acquisition — nothing is mapped there, so the
-					animation cannot show it. Depending on the fire that is 21 to 106 hours. Each vertical
+					animation cannot show it. Depending on the fire that is
+					<span id="info-delay-span">several hours to days</span>. Each vertical
 					mark is one acquisition; their spacing shows how densely the fire was mapped. Playback
 					speed follows the same spacing.
 				</dd>
 
-				<dt>Movement between two acquisitions</dt>
-				<dd>Linearly interpolated. This is a presentational aid: what happened between two overpasses cannot be known from this data.</dd>
+				<dt>Between two acquisitions</dt>
+				<dd>Timestamp and area figure are carried forward linearly. A presentational aid, not a measurement: what happened between two overpasses cannot be known from this data.</dd>
 
 				<dt>Area figure</dt>
-				<dd>Sum of all mapped patches for that state. Where one contiguous area dominates, its outline is morphed; where the fire is scattered across many patches, each state is faded in as a whole instead.</dd>
+				<dd>Sum of all mapped patches for that state. How change is shown depends on the fire: where one contiguous area dominates, its outline is morphed from state to state. Where the fire breaks into many separate patches, each state is faded in as a whole and stays — morphing would suggest standstill there while the total area grows. The second case currently applies to most of the fires.</dd>
+
+				<dt>When the area shrinks</dt>
+				<dd>This happens. Burnt area does not disappear again, but <em>mapped</em> area can: a later assessment delineates more precisely and excludes unburnt islands counted before. The figure may therefore fall while the red area on the map stays unchanged.</dd>
 
 				<dt>City comparison</dt>
-				<dd>The outline is moved to the fire location while keeping its actual area. Because a degree of longitude is shorter at higher latitudes, the east-west extent is corrected accordingly.</dd>
+				<dd>The outline is moved to the fire location and keeps its <strong>area</strong> — not its shape. Because a degree of longitude is shorter at higher latitudes, the east-west extent is corrected; for distant cities that compresses the outline by more than a fifth. It works as a measure of area, not as a city street plan.</dd>
 			</dl>
 
 			<h3>Sources and licences</h3>
@@ -122,17 +131,24 @@
 				Relief basemap: <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>.
 			</p>
 			<p>
-				This application is published under <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>.
-				Source code: <a href="https://github.com/marcomaas/fire" target="_blank" rel="noopener">github.com/marcomaas/fire</a>.
+				The source code of this application is published under the
+					<a href="https://github.com/marcomaas/fire/blob/master/LICENSE" target="_blank" rel="noopener">MIT licence</a>,
+					code at <a href="https://github.com/marcomaas/fire" target="_blank" rel="noopener">github.com/marcomaas/fire</a>.
+					The <strong>data</strong> carry their own licences, listed above — they do not follow the
+					licence of the code.
 			</p>
 			<p>
 				It builds on <em>Yosemite Rim Fire</em> by
 				<a href="https://github.com/opendatacity/fire" target="_blank" rel="noopener">OpenDataCity</a> (2013).
-				The morphing animation is carried over unchanged from that version; data source, basemap and
-				design were renewed in 2026 because the original services have been shut down.
+				The algorithm for morphing the outlines is carried over unchanged from that version. Data
+					source, basemap, design, timeline and the second display mode were built in 2026 because
+					the original services have been shut down.
 			</p>
 			<p>
-				This page embeds no analytics and sets no cookies.
+				This page embeds no analytics and sets no cookies itself. The map tiles are loaded from
+					<a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>, however — a third
+					party thus learns the IP address of the request. Whether that requires consent is a
+					question for the embedding page, not for us.
 			</p>
 			<p>
 				Publisher and responsible for the content:
