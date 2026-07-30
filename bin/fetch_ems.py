@@ -23,10 +23,6 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from shapely import union_all
-from shapely.geometry import shape
-from shapely.ops import unary_union
-
 API = "https://rapidmapping.emergency.copernicus.eu/backend/dashboard-api/public-activations/"
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -271,6 +267,10 @@ def outline(geojson):
     Originalanwendung, die ebenfalls die groesste Teilflaeche animierte, waehrend
     die Flaechenangabe das gesamte Brandgebiet auswies.
     """
+    from shapely import union_all
+    from shapely.geometry import shape
+    from shapely.ops import unary_union
+
     geoms = []
     for feature in geojson.get("features", []):
         if not feature.get("geometry"):

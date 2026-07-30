@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
 	<meta charset="utf-8">
-	<title>Waldbrand-Grafik einbetten — Beispiele</title>
+	<title>Embedding the wildfire graphic — examples</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta name="description" content="Beispielseite: die Waldbrand-Visualisierung eingebettet im Quer- und im Hochformat, mit Einbettungscode.">
+	<meta name="description" content="Example page: the wildfire visualisation embedded in landscape and portrait format, with the code to copy.">
 	<meta name="robots" content="noindex">
 
 	<link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
@@ -161,119 +161,116 @@
 		<a href="https://www.datenfreunde.com/" target="_blank" rel="noopener" title="Datenfreunde">
 			<img src="assets/img/df-logo.svg" alt="Datenfreunde">
 		</a>
-		<h1><span class="subject">Waldbrand-Grafik</span> einbetten</h1>
+		<h1><span class="subject">Wildfire graphic</span> embedded</h1>
 	</header>
 
 	<p class="lede">
-		Diese Seite zeigt die Visualisierung in den beiden Seitenverhältnissen, die in der
-		Praxis vorkommen: quer im Artikeltext und hoch für schmale Spalten oder mobile
-		Ansichten. Darunter steht jeweils der Code zum Kopieren.
+		This page shows the visualisation in the two aspect ratios that actually come up: landscape
+		within the body of an article, and portrait for narrow columns or mobile views. The code to
+		copy sits below each one.
 	</p>
 
 	<p>
-		Gezeigt wird eine Auswahl: <span id="count-words">mehrere</span> Brände, für die Copernicus
-		eine Kartierung mit mindestens zwei Zeitschnitten veröffentlicht hat. Es brennt in Europa an
-		mehr Orten. Wer die Auswahl im eigenen Artikel weiter einschränken will, findet die
-		Konfiguration in der <a href="index-de.html" target="_blank">vollständigen Anwendung</a>.
+		What you see is a selection: <span id="count-words">several</span> fires for which Copernicus
+		has published a mapping with at least two acquisitions. More of Europe is burning than that.
+		To narrow the selection further for your own article, use the configuration in the
+		<a href="index-en.html" target="_blank">full application</a>.
 	</p>
 
 	<p>
-		Der Zeitstrahl unter der Flächenangabe ist zeitproportional: Das Dreieck links markiert den
-		gemeldeten Brandausbruch, der schraffierte Abschnitt die Zeit bis zur ersten
-		Satellitenaufnahme, und jeder senkrechte Strich eine Aufnahme. Damit ist auf einen Blick
-		erkennbar, wann der Brand begann, wie lange er kartiert wurde und wie dicht. Auch die
-		Abspielgeschwindigkeit folgt den echten Zeitabständen — ein Sprung über zwei Tage dauert
-		länger als einer über einen.
+		The timeline below the area figure is proportional to real time: the triangle on the left
+		marks the reported outbreak, the hatched section the interval until the first satellite
+		acquisition, and every vertical mark one acquisition. That makes it legible at a glance when
+		the fire started, how long it was mapped and how densely. Playback speed follows the real
+		intervals too — a jump across two days takes longer than one across a single day.
 	</p>
 
 	<h2>
-		Querformat
-		<span class="meta">960 × 540 · für die Textbreite eines Artikels</span>
+		Landscape
+		<span class="meta">960 × 540 · for the body width of an article</span>
 	</h2>
 	<p>
-		Der Regelfall. Bei dieser Breite stehen Auswahlliste, Größenvergleich und Zeitanzeige
-		nebeneinander, ohne sich zu überlagern. Reicht die Höhe für die Liste nicht aus, lässt sie
-		sich scrollen.
+		The regular case. At this width the fire list, the size comparison and the time readout sit
+		side by side without overlapping. Where the height is not enough for the list, it scrolls.
 	</p>
-	<iframe class="demo" src="index-de.html#gironde/bordeaux" width="960" height="540"
-		title="Waldbrände in Frankreich und Spanien, Querformat" loading="lazy"></iframe>
-<pre>&lt;iframe src="https://apps.datenfreunde.com/#gironde/bordeaux"
+	<iframe class="demo" src="index-en.html#gironde/bordeaux" width="960" height="540"
+		title="Wildfires in France and Spain, landscape" loading="lazy"></iframe>
+<pre>&lt;iframe src="https://apps.datenfreunde.com/index-en.html#gironde/bordeaux"
         width="960" height="540" style="border:0" loading="lazy"
-        title="Waldbrände in Frankreich und Spanien"&gt;&lt;/iframe&gt;</pre>
+        title="Wildfires in France and Spain"&gt;&lt;/iframe&gt;</pre>
 
 	<h2>
-		Hochformat
-		<span class="meta">400 × 720 · für schmale Spalten und mobile Ansichten</span>
+		Portrait
+		<span class="meta">400 × 720 · for narrow columns and mobile views</span>
 	</h2>
 	<p>
-		Unter 720 Pixel Breite rücken die Auswahlblöcke schmaler zusammen, und Zustandsanzeige
-		und Abspielknopf teilen sich die untere Kante. Der Größenvergleich bleibt bedienbar, die
-		Karte bekommt aber deutlich weniger Fläche — für einen einzelnen Brand mit gesetztem
-		Anker ist das Format brauchbar, für die Umschaltung zwischen <span id="count-fires">allen</span> Bränden eher eng.
+		Below 720 pixels of width the selection blocks narrow and the state readout shares the bottom
+		edge with the play button. The size comparison stays usable, but the map gets noticeably less
+		room — the format works for a single fire opened via anchor, and is tight for switching
+		between <span id="count-fires">all</span> fires.
 	</p>
 
 	<div class="demo-row">
 		<div>
-			<iframe class="demo" src="index-de.html#central-spain/madrid" width="400" height="720"
-				title="Waldbrände in Frankreich und Spanien, Hochformat" loading="lazy"></iframe>
-<pre>&lt;iframe src="https://apps.datenfreunde.com/#central-spain/madrid"
+			<iframe class="demo" src="index-en.html#central-spain/madrid" width="400" height="720"
+				title="Wildfires in France and Spain, portrait" loading="lazy"></iframe>
+<pre>&lt;iframe src="https://apps.datenfreunde.com/index-en.html#central-spain/madrid"
         width="400" height="720" style="border:0" loading="lazy"
-        title="Waldbrände in Frankreich und Spanien"&gt;&lt;/iframe&gt;</pre>
+        title="Wildfires in France and Spain"&gt;&lt;/iframe&gt;</pre>
 		</div>
 		<div>
 			<h2 style="margin-top:0">
-				Anker setzen
-				<span class="meta">einen bestimmten Brand direkt öffnen</span>
+				Setting an anchor
+				<span class="meta">open a specific fire directly</span>
 			</h2>
 			<p>
-				Ohne Anker startet die Grafik mit dem ersten Brand der Liste. Mit Anker lässt sich
-				gezielt öffnen, was zum Artikel passt — auch gleich mit eingeblendetem
-				Stadtvergleich.
+				Without an anchor the graphic opens with the first fire in the list. An anchor opens
+				exactly what fits the article — optionally with the city comparison already shown.
 			</p>
-<pre id="anchor-list">Liste wird aus den Daten erzeugt.</pre>
+<pre id="anchor-list">List is generated from the data.</pre>
 			<p class="hint">
-				Das linke Beispiel nutzt <code>#central-spain/madrid</code> — deshalb liegt der
-				Umriss von Madrid schon beim Laden über der Brandfläche.
+				The example on the left uses <code>#central-spain/madrid</code>, which is why the
+				outline of Madrid already sits over the burnt area on load.
 			</p>
 		</div>
 	</div>
 
 	<h2>
-		Mitwachsend
-		<span class="meta">Breite folgt dem Container, Höhe über das Seitenverhältnis</span>
+		Fluid
+		<span class="meta">width follows the container, height via aspect ratio</span>
 	</h2>
 	<p>
-		Wer keine festen Pixelmaße setzen will, bindet die Grafik über ein Seitenverhältnis ein.
-		Sie füllt dann die verfügbare Breite und behält die Proportion — das ist in
-		Content-Management-Systemen meist der bequemere Weg.
+		If you would rather not set fixed pixel dimensions, embed the graphic via an aspect ratio. It
+		then fills the available width and keeps its proportion, which is usually the more convenient
+		route inside a content management system.
 	</p>
 	<div style="aspect-ratio: 16/9; width: 100%;">
-		<iframe class="demo" src="index-de.html#artana" style="width:100%;height:100%"
-			title="Waldbrände in Frankreich und Spanien, mitwachsend" loading="lazy"></iframe>
+		<iframe class="demo" src="index-en.html#artana" style="width:100%;height:100%"
+			title="Wildfires in France and Spain, fluid" loading="lazy"></iframe>
 	</div>
 <pre>&lt;div style="aspect-ratio: 16/9; max-width: 960px;"&gt;
-  &lt;iframe src="https://apps.datenfreunde.com/#artana"
+  &lt;iframe src="https://apps.datenfreunde.com/index-en.html#artana"
           style="width:100%;height:100%;border:0" loading="lazy"
-          title="Waldbrände in Frankreich und Spanien"&gt;&lt;/iframe&gt;
+          title="Wildfires in France and Spain"&gt;&lt;/iframe&gt;
 &lt;/div&gt;</pre>
 
 	<div class="hint">
-		<strong>Hinweise für die Einbettung.</strong>
-		Im Rahmen wird die Kopfzeile automatisch ausgeblendet, damit die Grafik nicht mit der
-		Seitennavigation der einbettenden Seite kollidiert. Die englische Fassung liegt unter
-		<code>/index-en.html</code>. Die Grafik bindet selbst keine Zähldienste ein und setzt keine
-		eigenen Cookies; die Kartenkacheln kommen allerdings von Esri, das damit die IP-Adresse des
-		Abrufs erfährt — ob daraus eine Einwilligungspflicht folgt, entscheidet die einbettende
-		Seite. Getestet ist das Layout ab 420 × 380 Pixel; darunter wird es nicht mehr geprüft.
+		<strong>Notes on embedding.</strong>
+		Inside a frame the header is hidden automatically so the graphic does not collide with the
+		navigation of the embedding page. The German version is at <code>/index-de.html</code>. The
+		graphic embeds no analytics and sets no cookies of its own; the map tiles do come from Esri,
+		which therefore learns the IP address of the request — whether that requires consent is for
+		the embedding page to decide. The layout is tested down to 420 × 380 pixels; below that it is
+		not checked.
 	</div>
 
 	<footer class="page">
-		Programmcode unter <a href="https://github.com/marcomaas/fire/blob/master/LICENSE" target="_blank" rel="noopener">MIT-Lizenz</a>
-		— die Daten stehen unter ihren eigenen Lizenzen, siehe unten. Nach einer Arbeit von <a href="https://github.com/opendatacity/fire" target="_blank" rel="noopener">OpenDataCity</a> (2013).
-		Brandumrisse: Copernicus EMS Rapid Mapping, © Europäische Union.
-		Stadtgrenzen: OpenStreetMap und Mitwirkende, ODbL. Reliefkarte: Esri.<br>
-		Quellcode: <a href="https://github.com/marcomaas/fire" target="_blank" rel="noopener">github.com/marcomaas/fire</a><br>
-		<a href="https://www.datenfreunde.com/impressum" target="_blank" rel="noopener">Impressum der Datenfreunde</a>
+		Source code under the <a href="https://github.com/marcomaas/fire/blob/master/LICENSE" target="_blank" rel="noopener">MIT licence</a>
+		— the data carry their own licences, see below. After a work by <a href="https://github.com/opendatacity/fire" target="_blank" rel="noopener">OpenDataCity</a> (2013).
+		Fire perimeters: Copernicus EMS Rapid Mapping, © European Union.
+		City boundaries: OpenStreetMap contributors, ODbL. Relief basemap: Esri.<br>
+		Source code: <a href="https://github.com/marcomaas/fire" target="_blank" rel="noopener">github.com/marcomaas/fire</a><br>
+		<a href="https://www.datenfreunde.com/impressum" target="_blank" rel="noopener">Datenfreunde imprint</a>
 	</footer>
 
 </div>
@@ -286,7 +283,7 @@
 	(function () {
 		if (typeof _fires === "undefined" || !_fires.length) return;
 
-		var zahlwort = ["kein", "ein", "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun"];
+		var zahlwort = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
 		var wort = _fires.length < zahlwort.length ? zahlwort[_fires.length] : String(_fires.length);
 		var byId = function (id) { return document.getElementById(id); };
 		if (byId("count-words")) byId("count-words").textContent = wort;
@@ -315,12 +312,12 @@
 		};
 
 		var zeilen = _fires.map(function (f, i) {
-			return fuelle(anker[i]) + f.name.de;
+			return fuelle(anker[i]) + f.name.en;
 		});
 
 		if (mitStadt) {
 			zeilen.push("");
-			zeilen.push(fuelle(mitStadt) + "mit Stadtumriss");
+			zeilen.push(fuelle(mitStadt) + "with city outline");
 		}
 
 		list.textContent = zeilen.join("\n");
