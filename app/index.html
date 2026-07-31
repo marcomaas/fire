@@ -13,11 +13,16 @@
 	</style>
 	<script>
 		/* Damit auch ein Aufruf des Verzeichnisses direkt in der Anwendung landet,
-		   statt eine Dateiliste zu zeigen. Der Anker wird mitgenommen. */
+		   statt eine Dateiliste zu zeigen.
+
+		   Anker UND Query werden mitgenommen. Der Anker allein genügte, solange es
+		   nur ihn gab; die Auswahl der gezeigten Brände steht aber in der Query
+		   (?nur=), und die fiel hier still weg — eine eingebettete Fassung mit
+		   festgelegter Auswahl hätte über diesen Weg wieder alle Brände gezeigt. */
 		(function () {
 			var lang = (navigator.language || 'de').slice(0, 2).toLowerCase();
 			var page = lang === 'de' ? 'index-de.html' : 'index-en.html';
-			window.location.replace(page + window.location.hash);
+			window.location.replace(page + window.location.search + window.location.hash);
 		})();
 	</script>
 </head>

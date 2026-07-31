@@ -19,6 +19,54 @@ $(document).ready(function () {
    * Braende in derselben Zone liegen. */
   var TZ_OFFSET_HOURS = 2;
 
+  /* ---------- Auswahl der gezeigten Braende ---------- */
+
+  /* Eine Redaktion soll je Einbettung festlegen koennen, welche Braende zu sehen
+   * sind — ohne eine eigene Fassung der Anwendung zu brauchen. Die Auswahl steht
+   * deshalb in der Adresse (?nur=gironde,artana) und ist damit Teil des
+   * iframe-Codes, den die Konfigurationsseite ausgibt.
+   *
+   * Rangfolge: Adresse vor assets/data/config.js vor "alle". Unbekannte Kuerzel
+   * werden uebergangen statt als Fehler behandelt, und eine Auswahl, von der
+   * nichts uebrig bleibt, faellt auf alle zurueck. Eine Einbettung, die auf einen
+   * spaeter entfernten Brand zeigt, zeigt dann wieder alles — das ist besser als
+   * eine leere Karte in einem fremden Artikel. */
+  function readSelection() {
+    var roh = null;
+
+    var m = /[?&]nur=([^&]*)/.exec(window.location.search);
+    if (m) roh = decodeURIComponent(m[1].replace(/\+/g, " "));
+    else if (typeof _config !== "undefined" && _config && _config.nur && _config.nur.length)
+      roh = _config.nur.join(",");
+
+    if (!roh) return null;
+
+    var gewuenscht = roh
+      .split(",")
+      .map(function (t) {
+        return t.trim().toLowerCase();
+      })
+      .filter(Boolean);
+    if (!gewuenscht.length) return null;
+
+    /* Reihenfolge aus den Daten, nicht aus der Adresse: die Daten sind nach
+     * Aktivierung sortiert, und eine vertippte Reihenfolge soll die Anwendung
+     * nicht umsortieren. */
+    var gefiltert = _fires.filter(function (f) {
+      return gewuenscht.indexOf(f.slug) !== -1;
+    });
+    return gefiltert.length ? gefiltert : null;
+  }
+
+  var selection = null;
+
+  /* Die eine Stelle, die beantwortet, welche Braende gezeigt werden. Alles
+   * andere — Liste, Auswahlfeld, Zahl im Info-Kasten, Rueckfall bei unbekanntem
+   * Anker — fragt hier und nirgends sonst. */
+  function visibleFires() {
+    return selection || _fires;
+  }
+
   /* Impressum der Datenfreunde. Steht in der Herkunftszeile der Karte, weil eine
    * randlose Kartenanwendung keine eigene Fußzeile hat — und weil das die
    * einzige Stelle ist, die auch im eingebetteten Zustand sichtbar bleibt. */
@@ -770,11 +818,15 @@ $(document).ready(function () {
   /* ---------- Brand wechseln ---------- */
 
   function selectFire(slug, citySlug) {
+    /* Nur innerhalb der Auswahl suchen. Sonst oeffnete ein Anker auf einen
+     * ausgefilterten Brand ihn trotzdem — die Einbettung haette gezeigt, was sie
+     * gerade nicht zeigen soll. */
+    var sichtbar = visibleFires();
     var next = null;
-    for (var i = 0; i < _fires.length; i++) {
-      if (_fires[i].slug === slug) next = _fires[i];
+    for (var i = 0; i < sichtbar.length; i++) {
+      if (sichtbar[i].slug === slug) next = sichtbar[i];
     }
-    if (!next) next = _fires[0];
+    if (!next) next = sichtbar[0];
 
     stop();
     fire = next;
@@ -842,11 +894,11 @@ $(document).ready(function () {
         "nine",
       ],
     }[lang];
-    var n = _fires.length;
+    var n = visibleFires().length;
     $("#info-count").text(n < zahlwort.length ? zahlwort[n] : String(n));
 
     /* Verzug zwischen gemeldetem Ausbruch und erster Aufnahme, über alle Brände. */
-    var verzuege = _fires
+    var verzuege = visibleFires()
       .filter(function (f) {
         return f.event_time;
       })
@@ -894,7 +946,7 @@ $(document).ready(function () {
     $("#map-picker [data-label=compare]").text(text.compare);
 
     var fires = $("#pick-fire").empty();
-    _fires.forEach(function (item) {
+    visibleFires().forEach(function (item) {
       $("<option>")
         .attr("value", item.slug)
         .text(item.name[lang] || item.name.de)
@@ -969,7 +1021,7 @@ $(document).ready(function () {
 
   function buildFireButtons() {
     var list = $("#map-fires ul").empty();
-    _fires.forEach(function (item) {
+    visibleFires().forEach(function (item) {
       $("<li>")
         .append(
           $("<a>")
@@ -1028,6 +1080,8 @@ $(document).ready(function () {
 
   /* ---------- Start ---------- */
 
+  selection = readSelection();
+
   buildFireButtons();
   buildCityButtons();
   buildPickers();
@@ -1039,7 +1093,7 @@ $(document).ready(function () {
   /* Anker der Form #brand oder #brand/stadt */
   function parseHash() {
     var parts = window.location.hash.replace("#", "").split("/");
-    return { fire: parts[0] || _fires[0].slug, city: parts[1] || null };
+    return { fire: parts[0] || visibleFires()[0].slug, city: parts[1] || null };
   }
 
   var start = parseHash();
