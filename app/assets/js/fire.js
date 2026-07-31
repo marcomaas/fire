@@ -182,7 +182,7 @@ $(document).ready(function () {
       stillOpen: "Kartierung läuft weiter",
       rangeJoin: " bis ",
       noCompare: "ohne Vergleich",
-      nearest: "am nächsten zum Brandort",
+      nearest: "am nächsten zum Brandort — beim Öffnen eingeblendet",
       details: "Angaben zum Brand",
       /* Nennt die Eintraege ausserhalb des Fensters mit ihrer Richtung. Nur eine
        * Zahl ohne Richtung liesse offen, wohin gescrollt werden muss — und in
@@ -246,7 +246,7 @@ $(document).ready(function () {
       stillOpen: "Mapping ongoing",
       rangeJoin: " to ",
       noCompare: "no comparison",
-      nearest: "closest to the fire",
+      nearest: "closest to the fire — shown on opening",
       details: "Fire details",
       hiddenBelow: function (n) {
         return n + " more ↓";
@@ -491,6 +491,19 @@ $(document).ready(function () {
   var playing = false;
   var activeCity = null;
 
+  /* Hat der Leser den Vergleich ausdruecklich abgeschaltet? Dann bleibt er auch
+   * beim naechsten Brand aus. Ohne dieses Merkmal kaeme die Voreinstellung bei
+   * jedem Brandwechsel zurueck und ueberginge damit eine Entscheidung, die der
+   * Leser gerade getroffen hat. */
+  var compareOff = false;
+
+  /* Kuerzel im Anker fuer "ausdruecklich ohne Vergleich". Noetig, seit eine
+   * Voreinstellung existiert: ohne dieses Kuerzel bedeutet #gironde sowohl
+   * "keine Angabe" (dann gilt die Voreinstellung) als auch "kein Vergleich"
+   * (dann gilt sie nicht) — und eine Redaktion, die im Konfigurator "ohne
+   * Vergleich" waehlt, bekaeme eine Einbettung mit Vergleich. */
+  var NO_COMPARE = "none";
+
   /* ---------- Groessenvergleich ---------- */
 
   /* Verschiebt einen Stadtumriss an den Brandort und behaelt dabei die
@@ -513,7 +526,12 @@ $(document).ready(function () {
 
   /* refit nur bei einer Handlung des Nutzers. Beim Brandwechsel raeumt
    * selectFire ohnehin auf und setzt den Ausschnitt danach selbst — ein
-   * zusaetzliches Zoomen dazwischen waere ein sichtbares Zucken. */
+   * zusaetzliches Zoomen dazwischen waere ein sichtbares Zucken.
+   *
+   * Das Merkmal compareOff setzt diese Funktion bewusst nicht: sie raeumt auch
+   * beim Brandwechsel auf, und dort darf die Voreinstellung des naechsten
+   * Brandes nicht mitgeloescht werden. Wer den Vergleich abwaehlt, setzt es an
+   * der Stelle, an der die Entscheidung faellt. */
   function clearCity(refit) {
     if (cityLayer) {
       map.removeLayer(cityLayer);
@@ -537,6 +555,7 @@ $(document).ready(function () {
       if (_cities[i].slug === slug) city = _cities[i];
     }
     if (!city) return;
+    compareOff = false;
     if (cityLayer) map.removeLayer(cityLayer);
     if (cityLabel) map.removeLayer(cityLabel);
     cityLayer = new L.Polygon(
@@ -627,6 +646,7 @@ $(document).ready(function () {
     evt.preventDefault();
     var slug = $(this).attr("data-city");
     if (!slug || slug === activeCity) {
+      compareOff = true;
       clearCity(true);
       return;
     }
@@ -635,11 +655,17 @@ $(document).ready(function () {
 
   /* ---------- Animation ---------- */
 
-  /* Der Anker haelt Brand und optional die Vergleichsstadt fest, damit ein
-   * bestimmter Vergleich verlinkbar ist: #gironde/bordeaux */
+  /* Der Anker haelt Brand und Vergleichsstadt fest, damit ein bestimmter
+   * Vergleich verlinkbar ist: #gironde/bordeaux. Der abgeschaltete Vergleich
+   * braucht dabei ein eigenes Kuerzel — siehe NO_COMPARE. */
   function syncHash() {
     if (!fire) return;
-    var target = "#" + fire.slug + (activeCity ? "/" + activeCity : "");
+    var teil = activeCity
+      ? "/" + activeCity
+      : compareOff
+        ? "/" + NO_COMPARE
+        : "";
+    var target = "#" + fire.slug + teil;
     if (window.location.hash !== target) {
       window.history.replaceState(null, "", target);
     }
@@ -908,7 +934,7 @@ $(document).ready(function () {
 
     $("#map-fires a").removeClass("highlight");
     $('#map-fires a[data-fire="' + fire.slug + '"]').addClass("highlight");
-    markNearestCity();
+    markDefaultCity();
     syncPickers();
     updateScrollHints();
 
@@ -920,10 +946,37 @@ $(document).ready(function () {
     showStep(fire.steps[0]);
     setButtonState(fire.steps.length < 2 ? "again" : "play");
 
-    if (citySlug) showCity(citySlug);
+    /* Ohne Angabe in der Adresse gilt die Voreinstellung aus den Daten. Der
+     * Groessenvergleich ist die Aussage dieser Anwendung — stand er im Standard
+     * aus, war sie in jeder Einbettung unsichtbar, die keinen Anker mit Stadt
+     * trug, und das ist der Code, den der Konfigurator ausgibt.
+     *
+     * Der Ausschnitt zoomt dafuer beim Laden weiter heraus als die Brandflaeche
+     * allein braucht. Das ist der Preis und er ist gewollt: die Flaeche ohne
+     * Bezugsgroesse ist eine rote Form ohne Groessenordnung. */
+    if (citySlug === NO_COMPARE) {
+      compareOff = true;
+    } else {
+      var ziel = citySlug || defaultCity();
+      if (ziel) showCity(ziel);
+    }
     syncHash();
 
     play();
+  }
+
+  /* Die Voreinstellung steht je Brand in den Daten (Feld compare, gesetzt von
+   * bin/fetch_ems.py). Abgeschaltet, wenn der Leser den Vergleich ausdruecklich
+   * weggeklickt hat, und uebergangen, wenn die genannte Stadt nicht mehr in der
+   * Liste steht — eine geaenderte Staedteliste soll keine leere Auswahl
+   * hinterlassen. */
+  function defaultCity() {
+    if (compareOff || !fire || !fire.compare) return null;
+    if (typeof _cities === "undefined") return null;
+    for (var i = 0; i < _cities.length; i++) {
+      if (_cities[i].slug === fire.compare) return fire.compare;
+    }
+    return null;
   }
 
   /* Füllt die Zahlen im Info-Kasten aus den Daten. Vorher standen dort feste
@@ -1098,41 +1151,28 @@ $(document).ready(function () {
   $(document).on("change", "#pick-city", function () {
     var slug = $(this).val();
     if (!slug) {
+      compareOff = true;
       clearCity(true);
       return;
     }
     showCity(slug);
   });
 
-  /* Naechstgelegene Stadt zum Brandort. Kein automatisches Einblenden: der
-   * Ausschnitt muesste dafuer beide Formen fassen und zoomte beim Laden heraus,
-   * bevor jemand den Brand gesehen hat. Stattdessen ein Vorschlag in der Liste —
-   * fuer einen Brand in der Gironde ist Bordeaux die naheliegende Bezugsgroesse,
-   * nicht der erste Eintrag der Liste.
+  /* Markiert die voreingestellte Stadt in der Liste. Die Wahl selbst wird hier
+   * nicht mehr gerechnet: sie steht je Brand in den Daten, gesetzt von
+   * bin/fetch_ems.py als die naechstgelegene der fuenf Staedte. Vorher rechnete
+   * das Frontend dieselbe Entfernung bei jedem Brandwechsel neu — zwei Orte
+   * derselben Aussage, und nur einer davon in einer Datei, die man ansehen kann.
    *
-   * Entfernung naeherungsweise in der Ebene, mit Breitenkorrektur auf die
-   * Laengengrade. Fuer eine Reihenfolge genuegt das; eine Grosskreisrechnung
-   * wuerde an keiner Stelle zu einer anderen Wahl fuehren. */
-  function markNearestCity() {
-    if (typeof _cities === "undefined" || !fire) return;
-    var naechste = null;
-    var kuerzeste = Infinity;
-    var kos = Math.cos((fire.center[0] * Math.PI) / 180);
-    _cities.forEach(function (city) {
-      var dLat = city.center[0] - fire.center[0];
-      var dLng = (city.center[1] - fire.center[1]) * kos;
-      var d = dLat * dLat + dLng * dLng;
-      if (d < kuerzeste) {
-        kuerzeste = d;
-        naechste = city.slug;
-      }
-    });
+   * Die Markierung bleibt sichtbar, auch wenn der Vergleich gerade
+   * abgeschaltet oder eine andere Stadt gewaehlt ist: sie sagt, welcher Eintrag
+   * zu diesem Brand gehoert, nicht welcher gerade aktiv ist. */
+  function markDefaultCity() {
     $("#map-compare a").removeClass("nearest").removeAttr("title");
-    if (naechste) {
-      $('#map-compare a[data-city="' + naechste + '"]')
-        .addClass("nearest")
-        .attr("title", text.nearest);
-    }
+    if (!fire || !fire.compare) return;
+    $('#map-compare a[data-city="' + fire.compare + '"]')
+      .addClass("nearest")
+      .attr("title", text.nearest);
   }
 
   function buildFireButtons() {
@@ -1251,12 +1291,27 @@ $(document).ready(function () {
     if (!fire) return;
     if (target.fire !== fire.slug) {
       selectFire(target.fire, target.city);
-    } else if (target.city !== activeCity) {
-      if (target.city) {
-        showCity(target.city);
-      } else {
-        clearCity(true);
-      }
+      return;
+    }
+
+    /* Gleicher Brand, andere Angabe zur Stadt. Drei Faelle: eine Stadt, das
+     * Kuerzel fuer "ohne Vergleich", oder gar nichts — und gar nichts heisst
+     * wie beim Laden: es gilt die Voreinstellung. */
+    var wunsch;
+    if (target.city === NO_COMPARE) {
+      wunsch = null;
+      compareOff = true;
+    } else if (target.city) {
+      wunsch = target.city;
+    } else {
+      compareOff = false;
+      wunsch = defaultCity();
+    }
+    if (wunsch === activeCity) return;
+    if (wunsch) {
+      showCity(wunsch);
+    } else {
+      clearCity(true);
     }
   });
 });

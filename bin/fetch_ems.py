@@ -27,6 +27,7 @@ API = "https://rapidmapping.emergency.copernicus.eu/backend/dashboard-api/public
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_FILE = ROOT / "app" / "assets" / "data" / "fires.js"
+CITIES_FILE = ROOT / "app" / "assets" / "data" / "cities.js"
 
 # Welche Braende dargestellt werden. Ein Eintrag entspricht einer Area of
 # Interest innerhalb einer EMS-Aktivierung, denn eine Aktivierung kann mehrere
@@ -625,6 +626,75 @@ def load_existing():
         return {}
 
 
+def load_cities():
+    """Liest die Staedte aus der erzeugten cities.js.
+
+    Kein Import aus build_cities.py: dort stehen nur die Namen und Suchbegriffe,
+    die Mittelpunkte entstehen erst beim Bauen aus der Geometrie. Gelesen wird
+    deshalb das Ergebnis, nicht die Konfiguration.
+    """
+    if not CITIES_FILE.exists():
+        return []
+    text = CITIES_FILE.read_text(encoding="utf-8")
+    start, end = text.find("["), text.rfind("]")
+    if start < 0 or end <= start:
+        return []
+    try:
+        return json.loads(text[start : end + 1])
+    except json.JSONDecodeError:
+        print(f"{CITIES_FILE.name} nicht lesbar - kein Standardvergleich gesetzt.", file=sys.stderr)
+        return []
+
+
+def nearest_city(center, cities):
+    """Naechstgelegene Stadt zu einem Brandort, als Kuerzel.
+
+    Entfernung naeherungsweise in der Ebene, mit Breitenkorrektur auf die
+    Laengengrade. Fuer eine Reihenfolge genuegt das; eine Grosskreisrechnung
+    wuerde bei fuenf europaeischen Staedten an keiner Stelle zu einer anderen
+    Wahl fuehren.
+    """
+    kos = math.cos(math.radians(center[0]))
+    best, shortest = None, None
+    for city in cities:
+        d_lat = city["center"][0] - center[0]
+        d_lng = (city["center"][1] - center[1]) * kos
+        d = d_lat * d_lat + d_lng * d_lng
+        if shortest is None or d < shortest:
+            shortest, best = d, city["slug"]
+    return best
+
+
+def annotate_compare(fires):
+    """Setzt je Brand die voreingestellte Vergleichsstadt.
+
+    Die Wahl gehoert in die Daten und nicht ins Frontend: sie ist eine Aussage
+    ueber den Brand ("Bordeaux ist hier die naheliegende Bezugsgroesse"), sie
+    aendert sich nur mit den Daten, und im Frontend waere sie bei jedem Laden neu
+    zu rechnen. Ohne Voreinstellung ist der Groessenvergleich - der eigentliche
+    Grund dieser Anwendung - in der Standard-Einbettung unsichtbar, weil der
+    erzeugte Einbettungscode keinen Anker mit Stadt traegt.
+    """
+    cities = load_cities()
+    if not cities:
+        print("Keine Staedte gefunden - Voreinstellung des Vergleichs uebersprungen.", file=sys.stderr)
+        return
+    for fire in fires:
+        slug = nearest_city(fire["center"], cities)
+        if slug:
+            fire["compare"] = slug
+            print(f"   Vergleich voreingestellt: {fire['slug']:14s} -> {slug}", flush=True)
+
+
+def write_fires(fires):
+    OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    OUT_FILE.write_text(
+        "/* Erzeugt von bin/fetch_ems.py - nicht von Hand bearbeiten. */\n"
+        "var _fires = " + json.dumps(fires, ensure_ascii=False, separators=(",", ":")) + ";\n",
+        encoding="utf-8",
+    )
+
+
 def report_status(configs):
     """Prueft je Aktivierung, ob sie noch offen ist und ob neue Staende vorliegen.
 
@@ -688,10 +758,28 @@ def main():
     args = sys.argv[1:]
     status_only = "--status" in args
     discover_only = "--discover" in args
+    compare_only = "--compare" in args
     wanted = [a for a in args if not a.startswith("--")]
 
     if discover_only:
         return discover()
+
+    # Nur die Voreinstellung des Vergleichs neu setzen, ohne Netz. Gebraucht,
+    # wenn sich die Staedteliste aendert: dann steht in den Braenden eine
+    # Vergleichsstadt, die es nicht mehr gibt, und ein voller Lauf laedt dafuer
+    # bis zu 59 MB je Produkt erneut herunter.
+    if compare_only:
+        bestand = load_existing()
+        if not bestand:
+            print("Kein Bestand in fires.js - nichts zu setzen.", file=sys.stderr)
+            return 1
+        order = [c["slug"] for c in FIRES]
+        fires = [bestand[s] for s in order if s in bestand]
+        fires += [f for s, f in bestand.items() if s not in order]
+        annotate_compare(fires)
+        write_fires(fires)
+        print(f"\n{OUT_FILE.relative_to(ROOT)}: {len(fires)} Brände, Vergleich neu voreingestellt")
+        return 0
 
     configs = [c for c in FIRES if not wanted or c["slug"] in wanted]
     if not configs:
@@ -731,12 +819,8 @@ def main():
         if kept:
             print(f"\nUnverändert übernommen: {', '.join(kept)}")
 
-    OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    OUT_FILE.write_text(
-        "/* Erzeugt von bin/fetch_ems.py - nicht von Hand bearbeiten. */\n"
-        "var _fires = " + json.dumps(fires, ensure_ascii=False, separators=(",", ":")) + ";\n",
-        encoding="utf-8",
-    )
+    annotate_compare(fires)
+    write_fires(fires)
 
     total_steps = sum(len(f["steps"]) for f in fires)
     size_kb = OUT_FILE.stat().st_size / 1024

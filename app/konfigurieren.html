@@ -256,8 +256,10 @@
 					<select id="start-city"></select>
 				</label>
 				<div class="hinweis">
-					Der Vergleich wird beim Laden eingeblendet. Der Kartenausschnitt fasst dann Brand und
-					Stadtumriss — bei einem kleinen Brand neben einer großen Stadt zoomt er dafür heraus.
+					Der Vergleich wird beim Laden eingeblendet — in der Voreinstellung mit der Stadt, die
+					dem Brand am nächsten liegt. Der Kartenausschnitt fasst dann Brand und Stadtumriss;
+					bei einem kleinen Brand neben einer großen Stadt zoomt er dafür heraus. Eine feste
+					Stadt bleibt auch dann stehen, wenn der Leser den Brand wechselt.
 				</div>
 			</fieldset>
 
@@ -325,10 +327,14 @@
 
 	var el = function (id) { return document.getElementById(id); };
 
+	/* Muss mit NO_COMPARE in assets/js/fire.js übereinstimmen. Die Prüfung
+	   tests/routing.test.html hält beide Seiten zusammen. */
+	var OHNE_VERGLEICH = 'none';
+
 	var zustand = {
 		gewaehlt: _fires.map(function (f) { return f.slug; }),
 		start: _fires[0].slug,
-		stadt: '',
+		stadt: 'auto',
 		format: '960x540',
 		breite: 960,
 		hoehe: 540,
@@ -393,8 +399,17 @@
 
 		var cities = el('start-city');
 		if (!cities.options.length) {
+			/* Drei Zustände, so wie die Anwendung sie kennt: die Voreinstellung aus
+			   den Daten (die nächstgelegene Stadt, im Anker gar nicht genannt), eine
+			   feste Stadt, oder ausdrücklich keine. Der letzte Fall braucht ein
+			   eigenes Kürzel im Anker — ohne es wäre er von "keine Angabe" nicht zu
+			   unterscheiden und die Einbettung zeigte doch einen Vergleich. */
+			var auto = document.createElement('option');
+			auto.value = 'auto';
+			auto.textContent = 'nächstgelegene Stadt (Voreinstellung)';
+			cities.appendChild(auto);
 			var leer = document.createElement('option');
-			leer.value = '';
+			leer.value = OHNE_VERGLEICH;
 			leer.textContent = 'ohne Vergleich';
 			cities.appendChild(leer);
 			if (typeof _cities !== 'undefined') {
@@ -425,7 +440,10 @@
 		if (zustand.gewaehlt.length && zustand.gewaehlt.length < _fires.length) {
 			query = '?nur=' + zustand.gewaehlt.join(',');
 		}
-		var anker = '#' + zustand.start + (zustand.stadt ? '/' + zustand.stadt : '');
+		/* 'auto' erscheint nicht im Anker: keine Angabe heißt in der Anwendung
+		   "Voreinstellung aus den Daten". */
+		var anker = '#' + zustand.start +
+			(zustand.stadt && zustand.stadt !== 'auto' ? '/' + zustand.stadt : '');
 		return basis + seite + query + anker;
 	}
 

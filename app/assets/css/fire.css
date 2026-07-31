@@ -838,19 +838,31 @@ html.in-frame #main {
 	pointer-events: none;
 }
 
+/* Wie ein Ortsname auf der Karte: Schrift mit hellem Saum, kein Kasten. Ein
+ * Kasten mit Rahmen las sich als Bedienelement — als etwas, das man anklicken
+ * kann — und stand damit in einer Reihe mit den Schaltflaechen, statt in einer
+ * mit den Ortsnamen der Kartenkacheln. Der Saum uebernimmt, was vorher die
+ * weisse Flaeche leistete: Lesbarkeit ueber jedem Untergrund.
+ *
+ * Farbe ist die des Umrisses. Damit ist ohne Legende klar, wozu die Schrift
+ * gehoert — auf der Karte gibt es sonst nichts in diesem Blau. */
 .city-label span {
 	display: inline-block;
 	transform: translate(-50%, -100%);
 	white-space: nowrap;
-	background: var(--color-white);
-	border: 2px solid #1B3A6B;
-	padding: 1px 6px 2px;
+	padding: 0 2px 3px;
 	font-family: var(--font-headline);
-	font-size: 11px;
+	font-size: 13px;
 	font-weight: var(--font-weight-bold);
-	text-transform: uppercase;
-	letter-spacing: 0.06em;
+	letter-spacing: 0.04em;
 	color: #1B3A6B;
+	text-shadow:
+		0 0 3px var(--color-white),
+		0 0 3px var(--color-white),
+		1px 1px 0 var(--color-white),
+		-1px 1px 0 var(--color-white),
+		1px -1px 0 var(--color-white),
+		-1px -1px 0 var(--color-white);
 }
 
 /* Der Vorschlag je Brand: die naechstgelegene Stadt. Ein Punkt vor dem Namen,
