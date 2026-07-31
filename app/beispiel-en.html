@@ -224,8 +224,10 @@
 				<span class="meta">open a specific fire directly</span>
 			</h2>
 			<p>
-				Without an anchor the graphic opens with the first fire in the list. An anchor opens
-				exactly what fits the article — optionally with the city comparison already shown.
+				Without an anchor the graphic opens with the first fire in the list, together with
+				the city closest to it — the size comparison is what this graphic is for, so it is
+				in the picture from the start. An anchor opens exactly what fits the article:
+				another fire, another city, or with <code>/none</code> no comparison at all.
 			</p>
 <pre id="anchor-list">List is generated from the data.</pre>
 			<p class="hint">
@@ -298,14 +300,19 @@
 		   Stadt aus den Städtedaten, nicht als Name hier hineingeschrieben. */
 		var mitStadt = null;
 		if (typeof _cities !== "undefined" && _cities.length) {
-			mitStadt = "#" + _fires[0].slug + "/" + _cities[0].slug;
+			/* Bewusst eine ANDERE Stadt als die voreingestellte des Brandes: die
+			   Zeile soll zeigen, wozu die Schreibweise gut ist, und die
+			   Voreinstellung bekommt man auch ohne sie. */
+			var andere = _cities.filter(function (c) { return c.slug !== _fires[0].compare; })[0];
+			mitStadt = "#" + _fires[0].slug + "/" + (andere || _cities[0]).slug;
 		}
+		var ohneStadt = "#" + _fires[0].slug + "/none";
 
 		/* Spaltenbreite über ALLE Zeilen, auch die Beispielzeile — sonst steht die
 		   längste ohne Abstand an ihrer Beschreibung. */
 		var anker = _fires.map(function (f) { return "#" + f.slug; });
 		var breite = 0;
-		anker.concat(mitStadt ? [mitStadt] : []).forEach(function (a) {
+		anker.concat(mitStadt ? [mitStadt] : []).concat([ohneStadt]).forEach(function (a) {
 			breite = Math.max(breite, a.length);
 		});
 
@@ -317,10 +324,11 @@
 			return fuelle(anker[i]) + f.name.en;
 		});
 
+		zeilen.push("");
 		if (mitStadt) {
-			zeilen.push("");
-			zeilen.push(fuelle(mitStadt) + "with city outline");
+			zeilen.push(fuelle(mitStadt) + "with a specific city");
 		}
+		zeilen.push(fuelle(ohneStadt) + "without the size comparison");
 
 		list.textContent = zeilen.join("\n");
 	})();

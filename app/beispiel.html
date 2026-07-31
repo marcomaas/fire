@@ -226,9 +226,11 @@
 				<span class="meta">einen bestimmten Brand direkt öffnen</span>
 			</h2>
 			<p>
-				Ohne Anker startet die Grafik mit dem ersten Brand der Liste. Mit Anker lässt sich
-				gezielt öffnen, was zum Artikel passt — auch gleich mit eingeblendetem
-				Stadtvergleich.
+				Ohne Anker startet die Grafik mit dem ersten Brand der Liste, und zwar mit der
+				Stadt, die ihm am nächsten liegt — der Größenvergleich ist die Aussage dieser
+				Grafik und steht deshalb von Anfang an im Bild. Mit Anker lässt sich gezielt
+				öffnen, was zum Artikel passt: ein anderer Brand, eine andere Stadt, oder mit
+				<code>/none</code> gar keine.
 			</p>
 <pre id="anchor-list">Liste wird aus den Daten erzeugt.</pre>
 			<p class="hint">
@@ -301,14 +303,19 @@
 		   Stadt aus den Städtedaten, nicht als Name hier hineingeschrieben. */
 		var mitStadt = null;
 		if (typeof _cities !== "undefined" && _cities.length) {
-			mitStadt = "#" + _fires[0].slug + "/" + _cities[0].slug;
+			/* Bewusst eine ANDERE Stadt als die voreingestellte des Brandes: die
+			   Zeile soll zeigen, wozu die Schreibweise gut ist, und die
+			   Voreinstellung bekommt man auch ohne sie. */
+			var andere = _cities.filter(function (c) { return c.slug !== _fires[0].compare; })[0];
+			mitStadt = "#" + _fires[0].slug + "/" + (andere || _cities[0]).slug;
 		}
+		var ohneStadt = "#" + _fires[0].slug + "/none";
 
 		/* Spaltenbreite über ALLE Zeilen, auch die Beispielzeile — sonst steht die
 		   längste ohne Abstand an ihrer Beschreibung. */
 		var anker = _fires.map(function (f) { return "#" + f.slug; });
 		var breite = 0;
-		anker.concat(mitStadt ? [mitStadt] : []).forEach(function (a) {
+		anker.concat(mitStadt ? [mitStadt] : []).concat([ohneStadt]).forEach(function (a) {
 			breite = Math.max(breite, a.length);
 		});
 
@@ -320,10 +327,11 @@
 			return fuelle(anker[i]) + f.name.de;
 		});
 
+		zeilen.push("");
 		if (mitStadt) {
-			zeilen.push("");
-			zeilen.push(fuelle(mitStadt) + "mit Stadtumriss");
+			zeilen.push(fuelle(mitStadt) + "mit einer bestimmten Stadt");
 		}
+		zeilen.push(fuelle(ohneStadt) + "ohne Größenvergleich");
 
 		list.textContent = zeilen.join("\n");
 	})();
