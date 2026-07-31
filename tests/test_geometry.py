@@ -282,12 +282,37 @@ class TestKonfiguration(unittest.TestCase):
             "name_en",
             "region_de",
             "region_en",
-            "timezone_label",
+            "timezone",
         }
         for config in fetch_ems.FIRES:
             self.assertTrue(
                 pflicht <= set(config),
                 f"{config.get('slug')} fehlt: {pflicht - set(config)}",
+            )
+
+    def test_zeitzone_ist_eine_iana_angabe(self):
+        """Vorher stand hier die Abkuerzung "CEST", und die Anwendung rechnete mit
+        einem festen Versatz von zwei Stunden. Fuer Sommeraufnahmen stimmte das;
+        eine Aufnahme aus dem Winterhalbjahr stuende damit eine Stunde falsch da,
+        ohne jeden Hinweis darauf. Eine IANA-Angabe traegt die Sommerzeitregel in
+        sich — die Anwendung rechnet den Versatz je Zeitpunkt daraus aus.
+
+        Geprueft wird die Form, nicht die Existenz der Zone: eine Zonendatenbank
+        ist hier nicht eingebunden, und die Form schliesst genau den Rueckfall in
+        eine Abkuerzung aus.
+        """
+        for config in fetch_ems.FIRES:
+            zone = config["timezone"]
+            self.assertRegex(
+                zone,
+                r"^[A-Z][A-Za-z_]+/[A-Z][A-Za-z_+-]+$",
+                f"{config['slug']}: {zone!r} sieht nicht wie eine IANA-Zone aus "
+                "(erwartet etwa Europe/Madrid)",
+            )
+            self.assertNotIn(
+                zone,
+                ("CET", "CEST", "MEZ", "MESZ", "UTC"),
+                f"{config['slug']}: {zone!r} ist eine Abkuerzung, keine Zone",
             )
 
     def test_aktivierungscodes_wohlgeformt(self):

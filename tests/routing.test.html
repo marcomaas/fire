@@ -62,6 +62,7 @@ function zustand(doc, win) {
 			? doc.querySelector('#map-compare a.highlight').getAttribute('data-city')
 			: null,
 		anzahl: (doc.getElementById('info-count') || {}).textContent || '',
+		datum: (doc.getElementById('map-date') || {}).textContent || '',
 		adresse: win.location.search + win.location.hash,
 		vollLink: (function () {
 			var a = doc.querySelector('.leaflet-control-attribution a[href*="apps.datenfreunde.com"]');
@@ -246,6 +247,21 @@ var FAELLE = [
 			check('Einstiegsseite | Auswahl kommt an',
 				z.liste.join(',') === 'gironde,artana', z.liste.join(','));
 			check('Einstiegsseite | Anker kommt an', z.aktiv === 'artana', 'aktiv ' + z.aktiv);
+		}
+	},
+	{
+		name: 'Zeitangabe traegt das Kuerzel der Ortszeit',
+		url: '../app/index-de.html#artana',
+		pruefe: function (z) {
+			/* Der Versatz stand als feste 2 im Code — richtig für die Sommeraufnahmen,
+			 * aber jede Aufnahme aus dem Winterhalbjahr stünde eine Stunde falsch da.
+			 * Gerechnet wird jetzt je Zeitpunkt aus der Zone des Brandes. Geprüft wird
+			 * das Ergebnis: die Anzeige nennt eine Zeit und das passende Kürzel. */
+			check('Zeitangabe | nennt Datum, Uhrzeit und Kürzel',
+				/\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}\s+(MEZ|MESZ)$/.test(z.datum.trim()),
+				'Anzeige "' + z.datum + '"');
+			check('Zeitangabe | Sommeraufnahme trägt MESZ',
+				z.datum.indexOf('MESZ') !== -1, 'Anzeige "' + z.datum + '"');
 		}
 	},
 	{

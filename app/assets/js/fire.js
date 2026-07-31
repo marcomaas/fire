@@ -13,11 +13,42 @@
 $(document).ready(function () {
   var lang = $("html").hasClass("site-de") ? "de" : "en";
 
-  /* Die Aufnahmezeitpunkte kommen laut API-Schema in UTC. Mitteleuropaeische
-   * Sommerzeit liegt zwei Stunden davor. Bewusst fest verdrahtet, weil moment
-   * hier ohne Zeitzonendatenbank eingebunden ist und alle dargestellten
-   * Braende in derselben Zone liegen. */
-  var TZ_OFFSET_HOURS = 2;
+  /* Die Aufnahmezeitpunkte kommen laut API-Schema in UTC und werden in der
+   * Ortszeit des Brandes gezeigt. Der Versatz stand hier als feste 2 — richtig
+   * fuer die Sommeraufnahmen, aber jede Aufnahme aus dem Winterhalbjahr stuende
+   * damit eine Stunde falsch da, und zwar ohne jeden Hinweis darauf.
+   *
+   * Gerechnet wird jetzt je Zeitpunkt aus der Zone des Brandes (Feld `timezone`
+   * in fires.js, eine IANA-Angabe wie Europe/Madrid). Der Umweg ueber
+   * toLocaleString ist noetig, weil moment hier ohne Zeitzonendatenbank
+   * eingebunden ist; Intl bringt die Regeln mit, ohne dass etwas dazukommt. */
+  var FALLBACK_TZ = "Europe/Paris";
+
+  function zoneOf(f) {
+    return (f && f.timezone) || FALLBACK_TZ;
+  }
+
+  function offsetHours(millis, zone) {
+    var d = new Date(millis);
+    try {
+      var alsUTC = new Date(d.toLocaleString("en-US", { timeZone: "UTC" }));
+      var alsOrt = new Date(d.toLocaleString("en-US", { timeZone: zone }));
+      var stunden = Math.round((alsOrt - alsUTC) / 3600000);
+      /* Unplausibles verwerfen statt anzeigen: ein unbekannter Zonenname wirft in
+       * manchen Umgebungen nicht, sondern liefert UTC. */
+      if (stunden >= -12 && stunden <= 14) return stunden;
+    } catch (e) {
+      /* Zonenname unbekannt — unten der Rueckfall. */
+    }
+    return 2;
+  }
+
+  /* Kuerzel passend zum tatsaechlichen Versatz. Frankreich und Spanien teilen
+   * dieselbe Zone; kaeme ein Brand aus einer anderen, muesste das hier mit. */
+  function zoneLabel(stunden) {
+    if (lang === "de") return stunden === 1 ? "MEZ" : "MESZ";
+    return stunden === 1 ? "CET" : "CEST";
+  }
 
   /* ---------- Auswahl der gezeigten Braende ---------- */
 
@@ -98,7 +129,6 @@ $(document).ready(function () {
   var text = {
     de: {
       dateFormat: "DD.MM.YYYY HH:mm",
-      tzLabel: "MESZ",
       size: function (ha) {
         return num(ha / 100, 2) + " km² (" + num(ha, 0) + " ha)";
       },
@@ -151,7 +181,6 @@ $(document).ready(function () {
     },
     en: {
       dateFormat: "YYYY-MM-DD HH:mm",
-      tzLabel: "CEST",
       size: function (ha) {
         return num(ha * 0.00386102, 2) + " sq mi (" + num(ha, 0) + " ha)";
       },
@@ -204,10 +233,11 @@ $(document).ready(function () {
   }[lang];
 
   function formatTime(millis) {
+    var stunden = offsetHours(millis, zoneOf(fire));
     return (
-      moment.utc(millis).add(TZ_OFFSET_HOURS, "hours").format(text.dateFormat) +
+      moment.utc(millis).add(stunden, "hours").format(text.dateFormat) +
       " " +
-      text.tzLabel
+      zoneLabel(stunden)
     );
   }
 
@@ -218,7 +248,7 @@ $(document).ready(function () {
   function formatDay(millis) {
     return moment
       .utc(millis)
-      .add(TZ_OFFSET_HOURS, "hours")
+      .add(offsetHours(millis, zoneOf(fire)), "hours")
       .format(text.dayShort);
   }
 
@@ -842,7 +872,6 @@ $(document).ready(function () {
     clearCity();
     $("#map-container").removeClass("played");
 
-    $("#fire-name").text(fire.name[lang] || fire.name.de);
     $("#fire-region").text(fire.region[lang] || fire.region.de);
     $("#fire-source").attr("href", fire.source_url).text(fire.activation);
     $("#fire-status").text(fire.closed ? text.contained : text.ongoing);

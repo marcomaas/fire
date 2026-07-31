@@ -125,6 +125,20 @@ MUTATIONEN = [
         "Verweis nimmt die Auswahl nicht mit",
     ),
     Mutation(
+        "Zeitversatz wieder fest verdrahtet",
+        JS,
+        "    var stunden = offsetHours(millis, zoneOf(fire));",
+        "    var stunden = 5;",
+        "Zeitangabe | Sommeraufnahme traegt MESZ",
+    ),
+    Mutation(
+        "Kuerzel passt nicht zum Versatz",
+        JS,
+        '    if (lang === "de") return stunden === 1 ? "MEZ" : "MESZ";',
+        '    if (lang === "de") return "Uhr";',
+        "Zeitangabe | nennt Datum, Uhrzeit und Kuerzel",
+    ),
+    Mutation(
         "Brandwechsel wirft die Auswahl weg",
         JS,
         'window.history.replaceState(null, "", target);',

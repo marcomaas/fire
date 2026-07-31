@@ -33,14 +33,22 @@ app/                     die eigentliche Anwendung, statisch ausliefern
   index-en.html          englische Fassung
   beispiel.html          Einbettungsbeispiele, deutsch
   beispiel-en.html       Einbettungsbeispiele, englisch
+  konfigurieren.html     erzeugt Einbettungscode mit festgelegter Auswahl
+  index.html             Weiterleitung nach Browsersprache, gibt Anker und Query weiter
   assets/data/fires.js   erzeugt von bin/fetch_ems.py
   assets/data/cities.js  erzeugt von bin/build_cities.py
+  assets/data/config.js  Voreinstellung der Auswahl, von Hand pflegbar
   assets/js/polymorph.js Überblend-Algorithmus, aus der Fassung 2013
   assets/js/fire.js      Anwendungslogik
 bin/fetch_ems.py         holt die Brandperimeter
 bin/build_cities.py      baut die Stadtumrisse
 data/*.geojson           Stadtgrenzen in echten Koordinaten (Quelldaten)
 ```
+
+`polymorph.js` ist absichtlich unangetastet, damit ein Vergleich mit der Fassung von
+2013 möglich bleibt — die LICENSE-Datei sagt das auch so. Darin steckt eine Funktion
+`linterpol`, die dort schon niemand aufrief; sie bleibt aus demselben Grund stehen.
+Wer im Code danach sucht, findet also nichts, und das ist kein Versehen.
 
 ## Daten aktualisieren
 

@@ -40,7 +40,10 @@ FIRES = [
         "name_en": "Gironde, France",
         "region_de": "Saumos und Le Porge, westlich von Bordeaux",
         "region_en": "Saumos and Le Porge, west of Bordeaux",
-        "timezone_label": "CEST",
+        # IANA-Zone, nicht die Abkuerzung: "CEST" gilt nur im Sommerhalbjahr. Die
+        # Anwendung rechnet den Zeitversatz daraus je Aufnahmezeitpunkt aus, damit
+        # eine Aufnahme aus dem Winterhalbjahr nicht eine Stunde falsch dasteht.
+        "timezone": "Europe/Paris",
     },
     {
         "slug": "central-spain",
@@ -50,7 +53,7 @@ FIRES = [
         "name_en": "La Atalaya, Spain",
         "region_de": "Zentralspanien, westlich von Madrid",
         "region_en": "Central Spain, west of Madrid",
-        "timezone_label": "CEST",
+        "timezone": "Europe/Madrid",
     },
     {
         "slug": "biscarrosse",
@@ -60,7 +63,7 @@ FIRES = [
         "name_en": "Biscarrosse, France",
         "region_de": "Landes, südwestliche Atlantikküste",
         "region_en": "Landes, south-western Atlantic coast",
-        "timezone_label": "CEST",
+        "timezone": "Europe/Paris",
     },
     {
         "slug": "artana",
@@ -70,7 +73,7 @@ FIRES = [
         "name_en": "Artana, Spain",
         "region_de": "Plana Baixa, Provinz Castellón, nördlich von Valencia",
         "region_en": "Plana Baixa, Castellón province, north of Valencia",
-        "timezone_label": "CEST",
+        "timezone": "Europe/Madrid",
     },
     {
         # Aelter als die uebrigen: Ereignis am 12.07.2026, Kartierung
@@ -83,7 +86,7 @@ FIRES = [
         "name_en": "Fontainebleau, France",
         "region_de": "Seine-et-Marne, südöstlich von Paris",
         "region_en": "Seine-et-Marne, south-east of Paris",
-        "timezone_label": "CEST",
+        "timezone": "Europe/Paris",
     },
 ]
 
@@ -459,7 +462,7 @@ def build_fire(config):
         "mode": mode,
         "name": {"de": config["name_de"], "en": config["name_en"]},
         "region": {"de": config["region_de"], "en": config["region_en"]},
-        "timezone_label": config["timezone_label"],
+        "timezone": config["timezone"],
         "event_time": activation.get("eventTime"),
         "closed": activation.get("closed"),
         "source_url": f"https://mapping.emergency.copernicus.eu/activations/{code}/",
@@ -575,7 +578,7 @@ def discover(look_back=14, miss_limit=8):
             f'        "name_en": "{c["aoi_name"]}, COUNTRY",\n'
             f'        "region_de": "{c["name"]} — Region ergänzen",\n'
             f'        "region_en": "{c["name"]} — add region",\n'
-            '        "timezone_label": "CEST",\n'
+            '        "timezone": "Europe/Paris",\n'
             "    },"
         )
         print(
