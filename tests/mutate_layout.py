@@ -71,14 +71,26 @@ MUTATIONEN = [
         '    $("#fire-details").prop("open", true);',
         "Nebenangaben sind zugeklappt",
     ),
+    # Der Griff sperrt Zeigerereignisse aus: fuer ein Skript weiterhin klickbar,
+    # fuer einen Menschen unbedienbar. Genau deshalb gibt es die Pruefung auf
+    # pointer-events — ein Klick aus dem Testlauf feuert auch dann, und die
+    # Pruefung dahinter blieb gruen. Nachgemessen: erst mit dieser Mutation wird
+    # der Unterschied sichtbar.
+    Mutation(
+        "Griff sperrt Zeigerereignisse aus",
+        CSS,
+        """#fire-details > summary {
+	display: none;
+	cursor: pointer;""",
+        """#fire-details > summary {
+	display: none;
+	pointer-events: none;
+	cursor: pointer;""",
+        "Aufklapp-Griff nimmt Zeigerereignisse an",
+    ),
     # Die Nebenangaben rutschen aus dem Aufklapper heraus — der Griff schaltet
     # dann etwas Leeres, und die Angaben stehen unabhaengig von ihm da. Das ist
     # der wahrscheinlichste Rueckfall, sobald jemand den Kasten umbaut.
-    #
-    # Der erste Versuch dieser Mutation setzte pointer-events: none auf den Griff
-    # und blieb wirkungslos: die Pruefung klickt ihn ueber die
-    # Ereignisschnittstelle an, und die ignoriert pointer-events. Eine Mutation,
-    # die nur den Zeiger aussperrt, prueft hier also nichts.
     Mutation(
         "Nebenangaben liegen ausserhalb des Aufklappers",
         SEITE_DE,
@@ -104,7 +116,7 @@ MUTATIONEN = [
 					<span><span id="fire-steps"></span> · Copernicus <a id="fire-source" href="#" target="_blank" rel="noopener"></a></span>
 					<span id="fire-note"></span>
 				</div>""",
-        "Aufklapp-Griff nimmt Zeigerereignisse an",
+        "Aufklappen zeigt die Nebenangaben",
     ),
     Mutation(
         "Aufklapper bleibt unbeschriftet",
@@ -126,23 +138,33 @@ MUTATIONEN = [
 		grid-template-columns: auto 1fr;""",
         "Zahl und Datum in einer Zeile",
     ),
-    # Ein Raster wird zur Reihe: dann steht der Zeitstrahl neben dem Datum statt
-    # darunter. Der erste Versuch nahm #map-timeline aus der Regel
-    # "grid-column: 1 / -1" heraus und blieb wirkungslos — die automatische
-    # Platzierung setzt es dann in die naechste freie Zelle, also ebenfalls in
-    # die zweite Reihe. Eine Mutation, die dasselbe Ergebnis auf anderem Weg
-    # erreicht, prueft nichts.
+    # Zwei Wege, den Zeitstrahl zu verlieren, und zwei verschiedene Pruefungen
+    # dafuer. Das ist der Ertrag des ersten Mutationslaufs: die erste Fassung
+    # dieser Mutation nahm #map-timeline aus der Regel "grid-column: 1 / -1"
+    # heraus und erwartete, dass die Reihenfolge rot wird — sie blieb gruen, weil
+    # die automatische Platzierung das Element in die naechste freie Zelle setzt,
+    # also ebenfalls unter die erste Reihe. Es rutscht nicht nach oben, es wird
+    # nur schmaler. Beides ist ein Fehler, aber ein anderer.
     Mutation(
-        # Der Name stand zuerst falsch: der Zeitstrahl rutscht nicht nach oben,
-        # er verliert die zweite Rasterspalte und wird 71 Pixel schmaler.
-        # Nachgemessen, statt die Pruefung an den Namen anzupassen.
         "Zeitstrahl verliert die zweite Spalte",
+        CSS,
+        """	#map-timeline,
+	#fire-details {
+		grid-column: 1 / -1;
+	}""",
+        """	#fire-details {
+		grid-column: 1 / -1;
+	}""",
+        "Zeitstrahl nutzt die ganze Breite",
+    ),
+    Mutation(
+        "Zeitstrahl rutscht neben das Datum",
         CSS,
         """		display: grid;
 		grid-template-columns: auto 1fr;""",
         """		display: flex;
 		grid-template-columns: auto 1fr;""",
-        "Zeitstrahl nutzt die ganze Breite",
+        "Zeitstrahl unter Zahl und Datum",
     ),
     Mutation(
         "Griff erscheint auch bei Platz",
