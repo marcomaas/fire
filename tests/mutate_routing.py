@@ -145,6 +145,47 @@ MUTATIONEN = [
         'window.history.replaceState(null, "", window.location.pathname + target);',
         "Brandwechsel | Adresse behaelt die Auswahl",
     ),
+    # ---- Voreingestellter Groessenvergleich ----
+    Mutation(
+        "Voreinstellung wird nicht eingeblendet",
+        JS,
+        "      var ziel = citySlug || defaultCity();",
+        "      var ziel = citySlug;",
+        "ohne Angabe | Standardvergleich ist eingeblendet",
+    ),
+    Mutation(
+        "Voreinstellung steht nicht im Anker",
+        JS,
+        'var teil = activeCity\n      ? "/" + activeCity',
+        'var teil = false\n      ? "/" + activeCity',
+        "ohne Angabe | Anker nennt die eingeblendete Stadt",
+    ),
+    Mutation(
+        "Kuerzel fuer ohne Vergleich wirkungslos",
+        JS,
+        "    if (citySlug === NO_COMPARE) {",
+        "    if (false) {",
+        "ohne Vergleich | keine Stadt eingeblendet",
+    ),
+    # Die Daten sind hier Teil der Aussage: steht in fires.js eine Stadt, die
+    # nicht zum Brand passt, ist der Vergleich falsch voreingestellt — auch wenn
+    # jede Zeile Code stimmt.
+    Mutation(
+        "Voreinstellung zeigt bei jedem Brand auf dieselbe Stadt",
+        "app/assets/data/fires.js",
+        '"compare":"paris"',
+        '"compare":"bordeaux"',
+        "Voreinstellung | anderer Brand, andere Stadt",
+    ),
+    # Befund 5 des Sprints: die weisse Fuellung wusch die Brandflaeche aus. Der
+    # alte Wert war 0,35.
+    Mutation(
+        "Fuellung des Stadtumrisses zurueck auf 0,35",
+        JS,
+        '    fillColor: "#FFFFFF",\n    fillOpacity: 0.1,',
+        '    fillColor: "#FFFFFF",\n    fillOpacity: 0.35,',
+        "Signalfarbe | Rot bleibt gesaettigt unter dem Umriss",
+    ),
 ]
 
 

@@ -191,6 +191,28 @@ MUTATIONEN = [
 	}""",
         "Brandfläche nicht hinter den Kästen",
     ),
+    # ---- Voreingestellter Groessenvergleich ----
+    Mutation(
+        "Voreinstellung wird nicht eingeblendet",
+        JS,
+        "      var ziel = citySlug || defaultCity();",
+        "      var ziel = citySlug;",
+        "Vergleich ist beim Laden eingeblendet",
+    ),
+    Mutation(
+        "Voreinstellung greift, ohne den Eintrag zu markieren",
+        JS,
+        "    $('#map-compare a[data-city=\"' + slug + '\"]').addClass(\"highlight\");\n\n    /* Ausschnitt so setzen",
+        "    /* Ausschnitt so setzen",
+        "voreingestellter Eintrag ist hervorgehoben",
+    ),
+    Mutation(
+        "Marke klappt nicht um",
+        JS,
+        'if (marke.height && marke.top < karte.top) el.classList.add("unten");',
+        'if (false) el.classList.add("unten");',
+        "Beschriftung im Sichtbereich",
+    ),
 ]
 
 
