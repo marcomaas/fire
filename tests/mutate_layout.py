@@ -206,12 +206,28 @@ MUTATIONEN = [
         "    /* Ausschnitt so setzen",
         "voreingestellter Eintrag ist hervorgehoben",
     ),
+    # ---- Kompakte Zustandsanzeige, direkt geprueft ----
+    #
+    # Dieselbe Mutation wie oben ("Zustandsanzeige waechst ueber die
+    # Brandflaeche"), hier gegen die neue Pruefung. Der Umweg ueber den
+    # verdeckten Anteil der Brandflaeche traegt seit dem voreingestellten
+    # Vergleich nicht mehr: die Karte fasst nun Brand UND Stadtumriss, der Brand
+    # sitzt dadurch kleiner und weiter oben, und die gewachsene Zustandsanzeige
+    # verdeckt von ihm nur noch 40 statt 77 Prozent — unter der Schwelle der
+    # Pruefung, obwohl der Fehler derselbe ist. Gemessen wird deshalb zusaetzlich
+    # die Bedingung selbst.
     Mutation(
-        "Marke klappt nicht um",
-        JS,
-        'if (marke.height && marke.top < karte.top) el.classList.add("unten");',
-        'if (false) el.classList.add("unten");',
-        "Beschriftung im Sichtbereich",
+        "Schwelle fuer die kompakte Anzeige faellt weg",
+        CSS,
+        """@media (max-height: 440px), (max-width: 460px), (max-height: 540px) and (max-width: 700px) {
+	#map-controls {
+		--compact: 1;
+	}""",
+        """@media (max-height: 440px), (max-width: 460px) {
+	#map-controls {
+		--compact: 1;
+	}""",
+        "kompakte Zustandsanzeige bei knappem Rahmen",
     ),
 ]
 

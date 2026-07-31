@@ -116,12 +116,22 @@ MUTATIONEN = [
         "return gefiltert;",
         "nur Unbekanntes |",
     ),
+    # Die Textstelle steht seit dem Formatierer ueber vier Zeilen. In der
+    # einzeiligen Fassung lief diese Mutation ins Leere und meldete "Textstelle
+    # nicht gefunden" — gefunden beim Mutationslauf zum voreingestellten
+    # Vergleich, nicht durch die Aenderung dort verursacht.
     Mutation(
         "Verweis schleppt die Auswahl mit",
         JS,
-        'var ziel = FULL_APP_URL + (lang === "de" ? "" : "index-en.html") + window.location.hash;',
-        'var ziel = FULL_APP_URL + (lang === "de" ? "" : "index-en.html")'
-        " + window.location.search + window.location.hash;",
+        """    var ziel =
+      FULL_APP_URL +
+      (lang === "de" ? "" : "index-en.html") +
+      window.location.hash;""",
+        """    var ziel =
+      FULL_APP_URL +
+      (lang === "de" ? "" : "index-en.html") +
+      window.location.search +
+      window.location.hash;""",
         "Verweis nimmt die Auswahl nicht mit",
     ),
     Mutation(
@@ -160,11 +170,30 @@ MUTATIONEN = [
         'var teil = false\n      ? "/" + activeCity',
         "ohne Angabe | Anker nennt die eingeblendete Stadt",
     ),
+    # Zwei Mutationen fuer das Kuerzel, weil zwei verschiedene Fehler moeglich
+    # sind. Ein uebersehenes NO_COMPARE laesst "none" als Stadtkuerzel
+    # durchlaufen: gezeigt wird dann trotzdem nichts, weil es keine Stadt dieses
+    # Namens gibt — rot wird nur der Anker, der die Angabe verliert. Der zweite
+    # Fehler ist der gefaehrliche: die Voreinstellung ueberstimmt die
+    # ausdrueckliche Ansage. Dann zeigt die Einbettung einen Vergleich, den die
+    # Redaktion abgewaehlt hat.
     Mutation(
         "Kuerzel fuer ohne Vergleich wirkungslos",
         JS,
         "    if (citySlug === NO_COMPARE) {",
         "    if (false) {",
+        "ohne Vergleich | Anker bleibt erhalten",
+    ),
+    Mutation(
+        "ohne Vergleich wird von der Voreinstellung ueberstimmt",
+        JS,
+        """    if (citySlug === NO_COMPARE) {
+      compareOff = true;
+    } else {""",
+        """    if (citySlug === NO_COMPARE) {
+      compareOff = true;
+      showCity(fire.compare);
+    } else {""",
         "ohne Vergleich | keine Stadt eingeblendet",
     ),
     # Die Daten sind hier Teil der Aussage: steht in fires.js eine Stadt, die

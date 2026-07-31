@@ -418,6 +418,23 @@ function testFrame(page, vp, win, doc) {
 
 	check(tag + ' | Aufklapper vorhanden', !!aufklapper && !!griff && !!beschriftung);
 
+	/* Die Schwelle selbst, nicht nur ihre Wirkung. Die Bedingung steht hier ein
+	 * zweites Mal, obwohl sie im Stylesheet steht — bewusst: eine Prüfung, die
+	 * ihre Erwartung aus derselben Datei liest, die sie prüft, kann nicht rot
+	 * werden.
+	 *
+	 * Gebraucht wird sie, seit der Größenvergleich beim Laden eingeblendet ist.
+	 * Vorher fing Prüfung 7b den Fehler mit: wächst die Zustandsanzeige bei
+	 * 470×470 auf ihre volle Höhe, lag sie über 77 % der Brandfläche. Jetzt fasst
+	 * die Karte Brand UND Stadtumriss, der Brand sitzt kleiner und weiter oben,
+	 * und derselbe Fehler verdeckt nur noch 40 % — unter der Schwelle jener
+	 * Prüfung, obwohl nichts besser geworden ist. */
+	var sollKompakt = vp.h <= 440 || vp.w <= 460 || (vp.h <= 540 && vp.w <= 700);
+	check(tag + ' | kompakte Zustandsanzeige bei knappem Rahmen',
+		kompakt === sollKompakt,
+		'--compact ' + (kompakt ? '1' : '0') + ' bei ' + vp.w + '×' + vp.h +
+		', erwartet ' + (sollKompakt ? '1' : '0'));
+
 	/* Zahl und Datum in einer Zeile hängt an der Rahmenhöhe, der Aufklapper auch
 	 * an der Breite: die ausgeschriebene Flächenangabe braucht neben einem Datum
 	 * mehr Platz, als ein 360 Pixel breiter Rahmen dem Kasten lässt. Deshalb zwei

@@ -865,12 +865,6 @@ html.in-frame #main {
 		-1px -1px 0 var(--color-white);
 }
 
-/* Umgeklappt: die Marke haengt unter der Nordkante statt darueber. Gesetzt von
- * platziereMarke() in fire.js, wenn oberhalb kein Platz mehr ist. */
-.city-label.unten span {
-	transform: translate(-50%, 2px);
-}
-
 /* Der Vorschlag je Brand: die naechstgelegene Stadt. Ein Punkt vor dem Namen,
  * keine Farbflaeche — die Hervorhebung des aktiven Eintrags soll dadurch nicht
  * an Gewicht verlieren. */

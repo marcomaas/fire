@@ -604,30 +604,8 @@ $(document).ready(function () {
      * auszuwählen ist eine ausdrückliche Handlung, und die Antwort darauf ist,
      * ihn zu zeigen. */
     fitToComparison();
-    platziereMarke();
     syncHash();
   }
-
-  /* Die Marke steht ueber der Nordkante des Umrisses. Liegt die Nordkante nah am
-   * oberen Kartenrand, ragt sie hinaus — bei 420x380 war sie zehn Pixel ueber
-   * dem Sichtbereich und damit halb abgeschnitten. Dann klappt sie unter die
-   * Kante, in den Umriss hinein: dort ist immer Platz, und ein Ortsname im
-   * Umriss ist die gewohnte Kartenlesart.
-   *
-   * Gemessen statt geraten, weil die Hoehe der Marke von der Schrift abhaengt.
-   * Laeuft nach jedem Verschieben der Karte, nicht nur beim Einblenden: die
-   * Kante wandert beim Zoomen. */
-  function platziereMarke() {
-    if (!cityLabel) return;
-    var el = cityLabel.getElement();
-    if (!el) return;
-    el.classList.remove("unten");
-    var marke = el.getBoundingClientRect();
-    var karte = map.getContainer().getBoundingClientRect();
-    if (marke.height && marke.top < karte.top) el.classList.add("unten");
-  }
-
-  map.on("moveend zoomend", platziereMarke);
 
   /* Ausschnitt über Brand und aktiven Stadtumriss. Ohne aktiven Vergleich fällt
    * es auf den Brand allein zurück. Weniger Rand als bei der Brandansicht, weil
