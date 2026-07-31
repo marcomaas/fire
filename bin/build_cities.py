@@ -112,7 +112,7 @@ def main():
             time.sleep(1.2)  # Nutzungsregeln von Nominatim: maximal eine Anfrage pro Sekunde
 
         if geom is None or geom.is_empty:
-            print(f"  {city['slug']}: kein Umriss gefunden - uebersprungen", file=sys.stderr)
+            print(f"  {city['slug']}: kein Umriss gefunden — übersprungen", file=sys.stderr)
             continue
 
         rings = to_rings(geom)

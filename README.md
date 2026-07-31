@@ -1,7 +1,13 @@
 # Waldbrand-Visualisierung
 
-Interaktive Karte, die kartierte Brandflächen im zeitlichen Verlauf zeigt und sie
-flächentreu mit dem Umriss europäischer Städte vergleicht.
+Interaktive Karte, die kartierte Brandflächen im zeitlichen Verlauf zeigt und ihre
+Fläche mit dem Umriss einer Stadt vergleicht — europäische Städte und Manhattan.
+
+Gezeigt wird eine **Auswahl**: jene Brände, für die Copernicus eine Kartierung mit
+mindestens zwei Zeitschnitten veröffentlicht hat. Es brennt an mehr Orten, als hier
+zu sehen sind. Welche Brände es sind, steht in der Liste `FIRES` in
+`bin/fetch_ems.py`; die Anwendung liest die Zahl zur Laufzeit aus den Daten und
+schreibt sie nirgends als Text fest.
 
 Diese Fassung ist eine Wiederbelebung von
 [opendatacity/fire](https://github.com/opendatacity/fire) (2013, *Yosemite Rim Fire*).
@@ -25,6 +31,8 @@ Gestaltung wurden 2026 erneuert, weil die ursprünglichen Dienste nicht mehr exi
 app/                     die eigentliche Anwendung, statisch ausliefern
   index-de.html          deutsche Fassung
   index-en.html          englische Fassung
+  beispiel.html          Einbettungsbeispiele, deutsch
+  beispiel-en.html       Einbettungsbeispiele, englisch
   assets/data/fires.js   erzeugt von bin/fetch_ems.py
   assets/data/cities.js  erzeugt von bin/build_cities.py
   assets/js/polymorph.js Überblend-Algorithmus, aus der Fassung 2013
@@ -58,6 +66,7 @@ Monitoring-Stände nach. Ein erneuter Lauf verlängert die Animation dann automa
 python3 -m http.server 8000 --directory app
 # http://localhost:8000/index-de.html      die Anwendung
 # http://localhost:8000/beispiel.html      Einbettungsbeispiele
+# http://localhost:8000/beispiel-en.html   dieselben, englisch
 ```
 
 ## Tests
@@ -171,12 +180,26 @@ keine Zeitzonendatenbank eingebunden ist und alle dargestellten Brände in derse
 Zone liegen.
 
 Der Städtevergleich verschiebt den Umriss an den Brandort und behält dabei die
-tatsächliche Fläche. Weil ein Längengrad in höheren Breiten kürzer ist, wird die
-Ost-West-Ausdehnung mit dem Verhältnis der Breitenkosinus korrigiert.
+tatsächliche Fläche — nicht die Form. Weil ein Längengrad in höheren Breiten kürzer
+ist, wird die Ost-West-Ausdehnung mit dem Verhältnis der Breitenkosinus korrigiert
+(`shiftRings` in `app/assets/js/fire.js`). Über weite Strecken ist diese Korrektur
+deutlich sichtbar: Hamburg (53,54° N) auf Artana (39,87° N) wird um 22,6 Prozent
+gestaucht. Der Umriss taugt als Flächenmaßstab, nicht als Stadtgrundriss.
+
+Die kartierte Fläche kann von einem Stand zum nächsten **sinken**. Verbrannte Fläche
+verschwindet nicht wieder, die kartierte aber schon: Ein späterer Stand grenzt genauer
+ab und nimmt vorher mitgezählte unverbrannte Inseln heraus. Die Zahl fällt dann,
+während das rote Gebiet im Bild unverändert bleibt. Die Animation ist deshalb keine
+Zusage, dass die Fläche nur wächst.
 
 ## Lizenz
 
-Anwendung unter [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), siehe `LICENSE`.
+Der Programmcode steht unter der [MIT-Lizenz](LICENSE) — Copyright 2013 OpenDataCity
+für die ursprüngliche Fassung, 2026 Datenfreunde GmbH für diese. `LICENSE` ist die
+maßgebliche Angabe; nutzersichtbare Stellen nannten bis Juli 2026 fälschlich CC BY 3.0
+und widersprachen damit genau der Datei, auf die sie verwiesen.
+
+Die **Daten** folgen nicht der Lizenz des Codes:
 
 Brandperimeter: Copernicus EMS Rapid Mapping, © Europäische Union.
 Stadtgrenzen: OpenStreetMap und Mitwirkende, ODbL.

@@ -378,7 +378,7 @@ def build_fire(config):
 
     products = delivered_products(aoi)
     if not products:
-        print("   keine ausgelieferten Flaechenprodukte", file=sys.stderr)
+        print("   keine ausgelieferten Flächenprodukte", file=sys.stderr)
         return None
 
     steps = []
@@ -431,7 +431,7 @@ def build_fire(config):
             )
 
     if len(steps) < 2:
-        print(f"   nur {len(steps)} Zeitschnitt(e) - reicht nicht fuer eine Animation", file=sys.stderr)
+        print(f"   nur {len(steps)} Zeitschnitt(e) — reicht nicht für eine Animation", file=sys.stderr)
 
     if not steps:
         return None
@@ -505,8 +505,8 @@ def discover(look_back=14, miss_limit=8):
             # sagen, wie weit gekommen wurde.
             print(
                 f"\nSuche bei {code} abgebrochen: {err}\n"
-                f"Bis {code} geprueft, darueber liegende Aktivierungen sind UNGEPRUEFT.\n"
-                "Spaeter erneut laufen lassen — der Dienst begrenzt die Abfragerate.",
+                f"Bis {code} geprüft, darüber liegende Aktivierungen sind UNGEPRÜFT.\n"
+                "Später erneut laufen lassen — der Dienst begrenzt die Abfragerate.",
                 file=sys.stderr,
             )
             blocked_at = code
@@ -552,7 +552,7 @@ def discover(look_back=14, miss_limit=8):
     if blocked_at:
         print(
             f"ACHTUNG: Suche wurde bei {blocked_at} abgewiesen — das Ergebnis ist "
-            "unvollstaendig. Was oberhalb liegt, wurde nicht geprueft."
+            "unvollständig. Was oberhalb liegt, wurde nicht geprüft."
         )
     if not candidates:
         if blocked_at:
