@@ -178,9 +178,18 @@ dann eine Vorschaukarte, die auf die interaktive Seite führt. Deshalb müssen `
 Der Anker hält Brand und Vergleichsstadt fest:
 
 ```
-#gironde              nur der Brand
-#gironde/bordeaux     Brand mit eingeblendetem Stadtumriss
+#gironde              Brand mit seiner voreingestellten Vergleichsstadt
+#gironde/madrid       Brand mit einer bestimmten Stadt
+#gironde/none         Brand ohne Größenvergleich
 ```
+
+Die Voreinstellung steht je Brand im Feld `compare` in `fires.js` und ist die
+nächstgelegene der fünf Städte; `bin/fetch_ems.py` setzt sie beim Bauen der Daten,
+`--compare` holt sie ohne Netzzugriff nach. Ohne Voreinstellung wäre der
+Größenvergleich — der Grund für diese Anwendung — in jeder Einbettung unsichtbar, die
+keinen Anker mit Stadt trägt. Genau deshalb braucht der abgeschaltete Vergleich ein
+eigenes Kürzel: ohne `none` hieße `#gironde` sowohl „keine Angabe" als auch „keine
+Stadt".
 
 Die Einstiegsseite im Wurzelverzeichnis leitet je nach Browsersprache auf die deutsche
 oder englische Fassung und nimmt den Anker mit.
@@ -205,10 +214,11 @@ Darstellungshilfe, keine Messung. Was zwischen zwei Satellitenüberflügen gesch
 ist aus diesen Daten nicht bekannt.
 
 Zeitangaben sind Aufnahmezeitpunkte der Satellitenszene, nicht Zeitpunkte der
-Veröffentlichung. Sie kommen laut Schema in UTC und werden für die Anzeige um zwei
-Stunden auf mitteleuropäische Sommerzeit verschoben — fest verdrahtet, weil hier
-keine Zeitzonendatenbank eingebunden ist und alle dargestellten Brände in derselben
-Zone liegen.
+Veröffentlichung. Sie kommen laut Schema in UTC und werden in die Ortszeit des Brandes
+gerechnet — je Aufnahme, aus der IANA-Zone im Feld `timezone` (`offsetHours` in
+`app/assets/js/fire.js`). Der feste Versatz von zwei Stunden, den diese Stelle bis
+Commit `c843547` beschrieb, wäre für eine Aufnahme aus dem Winterhalbjahr eine Stunde
+falsch gewesen.
 
 Der Städtevergleich verschiebt den Umriss an den Brandort und behält dabei die
 tatsächliche Fläche — nicht die Form. Weil ein Längengrad in höheren Breiten kürzer
