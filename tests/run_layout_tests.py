@@ -8,6 +8,8 @@ mit Code 1, sobald eine Pruefung fehlschlaegt.
 Zwei Testseiten:
   layout.test.html   — Geometrie und Bedienbarkeit in Rahmen mehrerer Groessen
   routing.test.html  — Adresse und Auswahl: Anker, ?nur=, Rueckfaelle
+  burn.test.html     — eine Invariante ueber die Animation: verbrannte Flaeche
+                       verschwindet nicht wieder
 
 Bewusst ohne Playwright oder Selenium: die Pruefungen brauchen nur echtes Layout
 und ein paar Klicks, das leistet Chrome mit --dump-dom und --virtual-time-budget
@@ -35,6 +37,9 @@ PORT = 8791
 SUITES = [
     ("tests/layout.test.html", 8000),
     ("tests/routing.test.html", 40000),
+    # Laeuft laenger als die anderen, weil sie die ganze Animation abtastet: drei
+    # Faelle je 16 Sekunden virtuelle Zeit.
+    ("tests/burn.test.html", 60000),
 ]
 
 # Chrome an den Orten, an denen er auf einem Mac und auf einem CI-Laeufer liegt.

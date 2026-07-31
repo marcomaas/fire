@@ -477,13 +477,14 @@ $(document).ready(function () {
    *
    * Verbrannte Fläche verschwindet nicht wieder. Sie bleibt deshalb rot, und der
    * Morph kann nur hinzufügen. Die aktuelle Front ist an ihrer Randlinie
-   * erkennbar, nicht mehr daran, dass alles davor verblasst. */
-  var reachedPolyStyle = {
-    stroke: false,
-    fill: true,
-    fillColor: "#BE1313",
-    fillOpacity: 0.55,
-  };
+   * erkennbar, nicht mehr daran, dass alles davor verblasst.
+   *
+   * Nur die Deckkraft, keine eigene Farbangabe: gezeichnet wird über
+   * footprintLayer(), das die Farbe aus otherPolyStyle nimmt. Ein zweites
+   * fillColor daneben wäre wirkungslos — beim Mutationstest hat genau das eine
+   * Ruecknahme vorgetaeuscht, die nichts veraendert hat. */
+  var REACHED_FILL_OPACITY = 0.55;
+
   /* Der Stadtumriss liegt ueber der Brandflaeche. Bei 0,35 Deckkraft zog das
    * weisse Fuellen der roten Flaeche die Farbe, gerade in der Schnittmenge - und
    * damit an der Stelle, um die es beim Vergleich geht. Die Fuellung soll den
@@ -767,7 +768,7 @@ $(document).ready(function () {
    * die Hauptfläche als Schatten liegen; die Streufeuer daneben — bei zerstreuten
    * Bränden ein erheblicher Teil der Fläche — verschwanden beim Übergang ganz. */
   function reachedFootprint(step) {
-    return footprintLayer(step, reachedPolyStyle.fillOpacity);
+    return footprintLayer(step, REACHED_FILL_OPACITY);
   }
 
   function playCrossfade() {
@@ -1143,7 +1144,13 @@ $(document).ready(function () {
     $("#fire-details").prop("open", !compact);
   }
 
-  $(document).on("scroll", "#map-fires ul, #map-compare ul", updateScrollHints);
+  /* Direkt an den Listen, nicht delegiert über das Dokument: scroll-Ereignisse
+   * steigen nicht auf, ein delegierter Zuhörer wird für ein scrollendes Element
+   * darum nie ausgelöst. Die Hinweiszeile blieb dadurch auf dem Stand des
+   * letzten Neuaufbaus stehen — nach jedem Scrollen nannte sie eine Zahl, die
+   * nicht mehr stimmte. Die Listen selbst werden nie ersetzt, nur ihr Inhalt;
+   * einmal binden genügt. */
+  $("#map-fires ul, #map-compare ul").on("scroll", updateScrollHints);
   $(window).on("resize", updateScrollHints);
   $(window).on("resize", applyCardMode);
 
@@ -1206,10 +1213,27 @@ $(document).ready(function () {
    * zu diesem Brand gehoert, nicht welcher gerade aktiv ist. */
   function markDefaultCity() {
     $("#map-compare a").removeClass("nearest").removeAttr("title");
-    if (!fire || !fire.compare) return;
-    $('#map-compare a[data-city="' + fire.compare + '"]')
-      .addClass("nearest")
-      .attr("title", text.nearest);
+    var legende = $("#map-compare .compare-legend");
+
+    if (!fire || !fire.compare) {
+      legende.prop("hidden", true).text("");
+      return;
+    }
+
+    var eintrag = $('#map-compare a[data-city="' + fire.compare + '"]');
+    eintrag.addClass("nearest").attr("title", text.nearest);
+
+    /* Die Legende erscheint nur, wenn es auch eine Markierung gibt — und nur,
+     * wenn die Liste sichtbar ist. In der kompakten Darstellung tritt ein
+     * Auswahlfeld an ihre Stelle, dort ist der Eintrag schon vorgewählt und eine
+     * Legende erklärte etwas, das man nicht sieht.
+     *
+     * Ohne diese Zeile stand vor dem Eintrag ein Viereck ohne Bedeutung. Die
+     * Erklärung steckte allein im title-Attribut, also im Hover — auf einem
+     * Touchscreen nirgends. Marco hat am 31.07.2026 gefragt, was es bedeutet. */
+    var sichtbar =
+      eintrag.length > 0 && legende.closest("#map-compare").is(":visible");
+    legende.prop("hidden", !sichtbar).text(sichtbar ? text.nearestLegend : "");
   }
 
   function buildFireButtons() {

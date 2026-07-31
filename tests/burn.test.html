@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+	<meta charset="utf-8">
+	<title>Brandflächen-Invariante</title>
+	<meta name="robots" content="noindex">
+	<style>
+		body { font-family: ui-monospace, Menlo, monospace; font-size: 13px; margin: 12px; background: #fff; color: #000; }
+		#frames { position: absolute; left: -20000px; top: 0; }
+		#frames iframe { border: 0; display: block; }
+		pre { white-space: pre-wrap; }
+	</style>
+</head>
+<body>
+<h1>Brandflächen-Invariante</h1>
+<pre id="results">läuft …</pre>
+<div id="frames"></div>
+
+<script>
+/*
+ * Eine einzige Aussage, über die ganze Animation: verbrannte Fläche verschwindet
+ * nicht wieder.
+ *
+ * Anlass ist eine Frage von Marco (31.07.2026): in der Gironde ging der Brand
+ * über eine Fläche und wieder zurück — wie kann ein Feuer über Verbranntes
+ * laufen? Es kann nicht. Die Daten wachsen monoton (5.763 → 26.008 → 28.219 →
+ * 31.534 ha), der Fehler lag in der Darstellung: im Morph-Modus verschiebt der
+ * Überblend-Algorithmus jeden Stützpunkt geradlinig auf seinen Nachfolger, und
+ * bei diesem Flächensprung liegt die Zwischenform nicht zwischen beiden
+ * Umrissen, sondern daneben. Der erreichte Stand blieb dabei nur als blasser
+ * brauner Schatten liegen — also sah man die Fläche tatsächlich unverbrennen.
+ *
+ * Gemessen wurde damals: bei 118 von 132 Bildern lag schon verbrannte Fläche
+ * außerhalb der roten Flächen, an einer Stelle alle 231 Prüfpunkte. Nach dem Fix
+ * (erreichter Stand bleibt in Brandrot) höchstens 1,0 Prozent — und das ist
+ * Kantenrauschen beim Abtasten, keine Bewegung.
+ *
+ * Geprüft wird über Punkt-in-Fläche gegen ALLE roten Pfade, nicht gegen den
+ * aktuellen Umriss allein: die Aussage ist "irgendwo rot", nicht "im vordersten
+ * Polygon".
+ */
+
+var TOLERANZ = 0.03; // 3 % für Abtastung auf der Kante; gemessen wird ~1 %
+var PROBEN_RASTER = 40;
+var LAUFZEIT_MS = 16000;
+var TAKT_MS = 120;
+
+/* Beide Sprachfassungen, und bewusst beide Darstellungsarten: gironde ist der
+ * einzige Brand im Morph-Modus, artana steht für die Überblendung. Ein Test nur
+ * auf gironde hätte den Fix bestätigt und den anderen Weg nie angesehen. */
+var FAELLE = [
+	{ seite: '../app/index-de.html', anker: '#gironde', modus: 'morph' },
+	{ seite: '../app/index-de.html', anker: '#artana', modus: 'crossfade' },
+	{ seite: '../app/index-en.html', anker: '#gironde', modus: 'morph' }
+];
+
+var lines = [];
+var pass = 0;
+var fail = 0;
+
+function check(label, ok, detail) {
+	if (ok) { pass++; lines.push('PASS ' + label); }
+	else { fail++; lines.push('FAIL ' + label + (detail ? ' — ' + detail : '')); }
+	document.getElementById('results').textContent = lines.join('\n');
+}
+
+function pruefe(fall, fertig) {
+	var f = document.createElement('iframe');
+	f.width = 900;
+	f.height = 600;
+	f.src = fall.seite + fall.anker;
+	var tag = fall.seite.replace('../app/', '') + fall.anker + ' (' + fall.modus + ')';
+
+	f.onload = function () {
+		var d = f.contentDocument;
+		var w = f.contentWindow;
+		var punkte = null;
+		var proben = 0;
+		var mitVerlust = 0;
+		var maxVerlust = 0;
+		var wann = '';
+		var verschoben = false;
+		var kartenLage = null;
+
+		function roteFlaechen() {
+			var raus = [];
+			d.querySelectorAll('.leaflet-overlay-pane path').forEach(function (p) {
+				var fill = (p.getAttribute('fill') || '').toUpperCase();
+				if (fill === '#BE1313' && p.isPointInFill) raus.push(p);
+			});
+			return raus;
+		}
+
+		function istRot(x, y, pfade) {
+			var pt = new w.DOMPoint(x, y);
+			for (var i = 0; i < pfade.length; i++) {
+				try { if (pfade[i].isPointInFill(pt)) return true; } catch (e) { /* leerer Pfad */ }
+			}
+			return false;
+		}
+
+		var tick = setInterval(function () {
+			var pfade = roteFlaechen();
+			if (!pfade.length) return;
+
+			/* Verschiebt sich die Karte, sind Bildschirmkoordinaten nicht mehr
+			 * vergleichbar — dann sagt die Messung nichts und darf nicht als
+			 * Erfolg durchgehen. */
+			var pane = d.querySelector('.leaflet-map-pane');
+			var lage = pane ? pane.style.transform : '';
+			if (kartenLage === null) kartenLage = lage;
+			else if (lage !== kartenLage) { verschoben = true; return; }
+
+			if (punkte === null) {
+				/* Die größte der roten Flächen abtasten, nicht die erste: das
+				 * Vordergrund-Polygon existiert von Anfang an, ist im
+				 * Überblend-Modus aber zunächst leer (setLatLngs([])). Seine
+				 * Bounding-Box ist dann 0×0, und die Abtastung lieferte null
+				 * Punkte — der Test bestand scheinbar, ohne etwas zu messen.
+				 * Deshalb auch: erst festhalten, wenn genug Punkte da sind,
+				 * sonst im nächsten Takt erneut versuchen. */
+				var beste = null;
+				var groesste = 0;
+				pfade.forEach(function (kandidat) {
+					var kb = kandidat.getBBox();
+					var flaeche = kb.width * kb.height;
+					if (flaeche > groesste) { groesste = flaeche; beste = kb; }
+				});
+				if (!beste || groesste <= 0) return;
+
+				var gefunden = [];
+				for (var x = beste.x; x < beste.x + beste.width; x += beste.width / PROBEN_RASTER) {
+					for (var y = beste.y; y < beste.y + beste.height; y += beste.height / PROBEN_RASTER) {
+						if (istRot(x, y, pfade)) gefunden.push([x, y]);
+					}
+				}
+				if (gefunden.length < 50) return;
+				punkte = gefunden;
+				return;
+			}
+
+			var drin = 0;
+			for (var i = 0; i < punkte.length; i++) {
+				if (istRot(punkte[i][0], punkte[i][1], pfade)) drin++;
+			}
+			proben++;
+			var raus = punkte.length - drin;
+			if (raus > maxVerlust) {
+				maxVerlust = raus;
+				wann = (d.getElementById('map-date') || {}).textContent.trim();
+			}
+			if (raus > 0) mitVerlust++;
+		}, TAKT_MS);
+
+		setTimeout(function () {
+			clearInterval(tick);
+			f.remove();
+
+			check(tag + ' | Karte bleibt während der Animation stehen', !verschoben,
+				'Ausschnitt verschoben — Messung wäre nicht vergleichbar');
+			check(tag + ' | Brandfläche gefunden und abgetastet',
+				!!punkte && punkte.length >= 50,
+				punkte ? punkte.length + ' Prüfpunkte' : 'keine rote Fläche gefunden');
+			check(tag + ' | Animation lief', proben >= 20, proben + ' Proben');
+
+			if (punkte && punkte.length) {
+				var anteil = maxVerlust / punkte.length;
+				check(tag + ' | verbrannte Fläche verschwindet nicht wieder',
+					anteil <= TOLERANZ,
+					'höchstens ' + maxVerlust + ' von ' + punkte.length + ' Prüfpunkten ' +
+					'nicht mehr rot (' + (anteil * 100).toFixed(1) + ' %, erlaubt ' +
+					(TOLERANZ * 100).toFixed(0) + ' %)' + (wann ? ', bei ' + wann : '') +
+					' · in ' + mitVerlust + ' von ' + proben + ' Proben trat Verlust auf');
+			}
+			fertig();
+		}, LAUFZEIT_MS);
+	};
+
+	document.getElementById('frames').appendChild(f);
+}
+
+(function next(i) {
+	if (i >= FAELLE.length) {
+		lines.push('DONE ' + pass + ' bestanden, ' + fail + ' fehlgeschlagen');
+		document.getElementById('results').textContent = lines.join('\n');
+		return;
+	}
+	pruefe(FAELLE[i], function () { next(i + 1); });
+})(0);
+</script>
+</body>
+</html>

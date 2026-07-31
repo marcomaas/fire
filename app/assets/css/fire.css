@@ -865,9 +865,14 @@ html.in-frame #main {
 		-1px -1px 0 var(--color-white);
 }
 
-/* Der Vorschlag je Brand: die naechstgelegene Stadt. Ein Punkt vor dem Namen,
- * keine Farbflaeche — die Hervorhebung des aktiven Eintrags soll dadurch nicht
- * an Gewicht verlieren. */
+/* Die Vorauswahl je Brand. Ein Punkt vor dem Namen, keine Farbflaeche — die
+ * Hervorhebung des aktiven Eintrags soll dadurch nicht an Gewicht verlieren.
+ *
+ * Blau, nicht Gelb: Gelb markiert in dieser Liste den ausgewaehlten Eintrag
+ * (ganzflaechig). Ein gelbes Viereck davor bedeutete damit etwas anderes als
+ * dieselbe Farbe zwei Zeilen hoeher — Marco hat am 31.07.2026 gefragt, was das
+ * Viereck bei Paris soll, waehrend Bordeaux gelb ausgewaehlt war. Blau ist im
+ * ganzen Erscheinungsbild die Farbe der Nebenangabe, und genau das ist es. */
 #map-compare a.nearest::before {
 	content: "";
 	display: inline-block;
@@ -875,7 +880,25 @@ html.in-frame #main {
 	height: 5px;
 	margin-right: 5px;
 	vertical-align: 1px;
-	background: var(--color-yellow);
+	background: var(--color-blue);
+}
+
+/* Erklaert das Viereck. Nur sichtbar, wenn es eines gibt — fire.js setzt hidden. */
+.compare-legend {
+	margin: 6px 0 0;
+	font-size: 10.5px;
+	line-height: 1.35;
+	color: var(--color-blue);
+}
+
+.compare-legend::before {
+	content: "";
+	display: inline-block;
+	width: 5px;
+	height: 5px;
+	margin-right: 5px;
+	vertical-align: 1px;
+	background: var(--color-blue);
 }
 
 /* Der Eintrag, der den Vergleich aufhebt. Steht abgesetzt ueber der Liste, damit
