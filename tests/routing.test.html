@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+	<meta charset="utf-8">
+	<title>Routing- und Auswahl-Tests</title>
+	<meta name="robots" content="noindex">
+	<style>
+		body { font-family: ui-monospace, Menlo, monospace; font-size: 13px; margin: 12px; background: #fff; color: #000; }
+		#frames { position: absolute; left: -20000px; top: 0; }
+		#frames iframe { border: 0; display: block; }
+		pre { white-space: pre-wrap; }
+	</style>
+</head>
+<body>
+<h1>Routing- und Auswahl-Tests</h1>
+<pre id="results">läuft …</pre>
+<div id="frames"></div>
+
+<script>
+/*
+ * Prüft, was die Adresse mit der Anwendung macht — nicht wie sie aussieht.
+ *
+ * Diese Prüfungen gehören nicht in layout.test.html: dort geht es um Geometrie
+ * bei verschiedenen Rahmengrößen, hier um Verhalten bei verschiedenen Adressen.
+ * Beides in einer Datei hieße, jede Adresse in zehn Rahmen zu laden.
+ *
+ * Anlass: mit ?nur= kann eine Redaktion je Einbettung festlegen, welche Brände
+ * zu sehen sind. Damit hängt an der Adresse eine inhaltliche Aussage — ein
+ * stiller Fehler zeigt dann in einem fremden Artikel Brände, die dort nicht
+ * stehen sollen. Genau ein solcher Fehler steckte in index.html: die
+ * Weiterleitung nahm den Anker mit, die Query nicht.
+ */
+
+var lines = [];
+var pass = 0;
+var fail = 0;
+
+function check(label, ok, detail) {
+	if (ok) { pass++; lines.push('PASS ' + label); }
+	else { fail++; lines.push('FAIL ' + label + (detail ? ' — ' + detail : '')); }
+	document.getElementById('results').textContent = lines.join('\n');
+}
+
+/* Liest den Zustand einer geladenen Fassung aus. Bewusst über das erzeugte
+ * Dokument statt über innere Variablen: geprüft wird, was ein Leser sieht. */
+function zustand(doc, win) {
+	var listen = [];
+	doc.querySelectorAll('#map-fires a[data-fire]').forEach(function (a) {
+		listen.push(a.getAttribute('data-fire'));
+	});
+	var felder = [];
+	var sel = doc.getElementById('pick-fire');
+	if (sel) {
+		for (var i = 0; i < sel.options.length; i++) felder.push(sel.options[i].value);
+	}
+	var aktiv = doc.querySelector('#map-fires a.highlight');
+	return {
+		liste: listen,
+		feld: felder,
+		aktiv: aktiv ? aktiv.getAttribute('data-fire') : null,
+		stadt: (doc.querySelector('#map-compare a.highlight') || {}).getAttribute
+			? doc.querySelector('#map-compare a.highlight').getAttribute('data-city')
+			: null,
+		anzahl: (doc.getElementById('info-count') || {}).textContent || '',
+		adresse: win.location.search + win.location.hash,
+		vollLink: (function () {
+			var a = doc.querySelector('.leaflet-control-attribution a[href*="apps.datenfreunde.com"]');
+			return a ? a.getAttribute('href') : null;
+		})()
+	};
+}
+
+function lade(url, cb) {
+	var f = document.createElement('iframe');
+	f.width = 900;
+	f.height = 600;
+	f.src = url;
+	f.onload = function () {
+		/* Wartezeit, bis Daten geladen und die Auswahl aufgebaut ist. Die Karte
+		 * selbst muss dafür nicht fertig sein. */
+		setTimeout(function () {
+			var z = null;
+			try {
+				z = zustand(f.contentDocument, f.contentWindow);
+			} catch (e) {
+				z = { fehler: String(e) };
+			}
+			f.remove();
+			cb(z);
+		}, 900);
+	};
+	document.getElementById('frames').appendChild(f);
+}
+
+var ALLE = ['gironde', 'central-spain', 'biscarrosse', 'artana', 'fontainebleau'];
+
+var FAELLE = [
+	{
+		name: 'ohne Angabe: alle Brände',
+		url: '../app/index-de.html',
+		pruefe: function (z) {
+			check('ohne Angabe | Liste zeigt alle Brände',
+				z.liste.length === ALLE.length, z.liste.join(','));
+			check('ohne Angabe | erster Brand ist aktiv',
+				z.aktiv === ALLE[0], 'aktiv ' + z.aktiv);
+			check('ohne Angabe | kein Stadtvergleich',
+				z.stadt === '' || z.stadt === null, 'Stadt ' + JSON.stringify(z.stadt));
+		}
+	},
+	{
+		name: 'Anker öffnet einen Brand',
+		url: '../app/index-de.html#artana',
+		pruefe: function (z) {
+			check('Anker | öffnet den genannten Brand', z.aktiv === 'artana', 'aktiv ' + z.aktiv);
+		}
+	},
+	{
+		name: 'Anker mit Stadt',
+		url: '../app/index-de.html#fontainebleau/paris',
+		pruefe: function (z) {
+			check('Anker mit Stadt | Brand stimmt', z.aktiv === 'fontainebleau', 'aktiv ' + z.aktiv);
+			check('Anker mit Stadt | Stadt ist eingeblendet', z.stadt === 'paris', 'Stadt ' + z.stadt);
+		}
+	},
+	{
+		name: 'unbekannter Anker',
+		url: '../app/index-de.html#gibtsnicht',
+		pruefe: function (z) {
+			/* Ein Tippfehler oder ein später entfernter Brand darf keine leere
+			 * Karte ergeben. */
+			check('unbekannter Anker | fällt auf den ersten Brand zurück',
+				z.aktiv === ALLE[0], 'aktiv ' + z.aktiv);
+		}
+	},
+	{
+		name: 'Auswahl über ?nur=',
+		url: '../app/index-de.html?nur=gironde,artana',
+		pruefe: function (z) {
+			check('?nur= | Liste zeigt nur die genannten Brände',
+				z.liste.join(',') === 'gironde,artana', z.liste.join(','));
+			check('?nur= | Auswahlfeld zeigt dieselben',
+				z.feld.join(',') === 'gironde,artana', z.feld.join(','));
+			check('?nur= | Zahl im Info-Kasten stimmt',
+				z.anzahl === 'zwei', 'Zahl "' + z.anzahl + '"');
+		}
+	},
+	{
+		name: 'Reihenfolge kommt aus den Daten',
+		url: '../app/index-de.html?nur=artana,gironde',
+		pruefe: function (z) {
+			/* Eine vertippte Reihenfolge in der Adresse soll die Anwendung nicht
+			 * umsortieren — sonst sieht dieselbe Auswahl je nach Schreibweise
+			 * anders aus. */
+			check('Reihenfolge | folgt den Daten, nicht der Adresse',
+				z.liste.join(',') === 'gironde,artana', z.liste.join(','));
+		}
+	},
+	{
+		name: 'Leerzeichen und Groß-/Kleinschreibung',
+		url: '../app/index-de.html?nur=%20Gironde%20,%20ARTANA%20',
+		pruefe: function (z) {
+			check('Schreibweise | Leerzeichen und Großbuchstaben werden verkraftet',
+				z.liste.join(',') === 'gironde,artana', z.liste.join(','));
+		}
+	},
+	{
+		name: 'Anker außerhalb der Auswahl',
+		/* Die Auswahl beginnt bewusst NICHT mit dem ersten Brand der Daten, und der
+		 * Anker zeigt bewusst auf genau diesen ersten Brand. Sonst prüft der Fall
+		 * nichts: fiele der Rückfall fälschlich auf _fires[0] statt auf den ersten
+		 * Brand der Auswahl, käme bei ?nur=gironde,… beides Mal gironde heraus. Der
+		 * Mutationslauf hat genau das nachgewiesen — mit gironde an erster Stelle
+		 * blieb die Prüfung grün, obwohl der Rückfall die Auswahl ignorierte. */
+		url: '../app/index-de.html?nur=artana,fontainebleau#gironde',
+		pruefe: function (z) {
+			/* Das ist die inhaltlich wichtigste Prüfung: ein Anker darf die
+			 * festgelegte Auswahl nicht aushebeln. Sonst zeigte die Einbettung
+			 * genau den Brand, den sie nicht zeigen soll. */
+			/* Auf ein vorhandenes aktives Element bestehen, nicht nur auf ein
+			 * anderes: ohne den ersten Teil bestünde die Prüfung auch dann, wenn
+			 * überhaupt kein Brand hervorgehoben ist. Genau das trat bei der
+			 * Mutation ein — der Rückfall wählte einen Brand außerhalb der Liste,
+			 * es gab kein Element dafür, und die Prüfung blieb grün. */
+			check('Anker außerhalb | öffnet ihn nicht',
+				z.aktiv !== null && z.aktiv !== 'gironde', 'aktiv ' + z.aktiv);
+			check('Anker außerhalb | fällt in die Auswahl zurück',
+				z.liste.indexOf(z.aktiv) !== -1, 'aktiv ' + z.aktiv + ' nicht in ' + z.liste.join(','));
+			check('Anker außerhalb | nimmt den ersten Brand der Auswahl',
+				z.aktiv === 'artana', 'aktiv ' + z.aktiv);
+		}
+	},
+	{
+		name: 'nur unbekannte Kürzel',
+		url: '../app/index-de.html?nur=paris,london',
+		pruefe: function (z) {
+			/* Bleibt von der Auswahl nichts übrig, ist alles zeigen besser als
+			 * eine leere Karte in einem fremden Artikel. */
+			check('nur Unbekanntes | fällt auf alle Brände zurück',
+				z.liste.length === ALLE.length, z.liste.join(','));
+		}
+	},
+	{
+		name: 'leere Angabe',
+		url: '../app/index-de.html?nur=',
+		pruefe: function (z) {
+			check('leere Angabe | zeigt alle Brände',
+				z.liste.length === ALLE.length, z.liste.join(','));
+		}
+	},
+	{
+		name: 'Auswahl übersteht das Schreiben des Ankers',
+		/* Ohne Anker in der Adresse — und das ist der Punkt: nur dann schreibt die
+		 * Anwendung den Anker selbst, und nur dann kann sie dabei die Auswahl
+		 * verlieren. Mit #artana in der Adresse und artana als erstem Brand der
+		 * Auswahl stimmte der Anker bereits, das Schreiben entfiel, und der Fall
+		 * prüfte die Zeile nie, die er prüfen sollte. Auch das hat erst der
+		 * Mutationslauf gezeigt. */
+		url: '../app/index-de.html?nur=gironde,artana',
+		pruefe: function (z) {
+			check('Brandwechsel | Anker wird geschrieben',
+				z.adresse.indexOf('#gironde') !== -1, 'Adresse ' + z.adresse);
+			check('Brandwechsel | Adresse behält die Auswahl',
+				z.adresse.indexOf('nur=') !== -1, 'Adresse ' + z.adresse);
+		}
+	},
+	{
+		name: 'Verweis auf die vollständige Anwendung',
+		url: '../app/index-de.html?nur=gironde#gironde',
+		pruefe: function (z) {
+			check('Rahmen | Verweis auf die vollständige Anwendung vorhanden',
+				!!z.vollLink, 'kein Verweis in der Herkunftszeile');
+			if (z.vollLink) {
+				check('Rahmen | Verweis nimmt den Anker mit',
+					z.vollLink.indexOf('#gironde') !== -1, z.vollLink);
+				/* Ohne Filter: in der vollen Anwendung soll der Leser die Auswahl
+				 * selbst steuern können. */
+				check('Rahmen | Verweis nimmt die Auswahl nicht mit',
+					z.vollLink.indexOf('nur=') === -1, z.vollLink);
+			}
+		}
+	},
+	{
+		name: 'Einstiegsseite gibt Anker und Auswahl weiter',
+		url: '../app/index.html?nur=gironde,artana#artana',
+		pruefe: function (z) {
+			check('Einstiegsseite | Auswahl kommt an',
+				z.liste.join(',') === 'gironde,artana', z.liste.join(','));
+			check('Einstiegsseite | Anker kommt an', z.aktiv === 'artana', 'aktiv ' + z.aktiv);
+		}
+	},
+	{
+		name: 'englische Fassung filtert genauso',
+		url: '../app/index-en.html?nur=gironde,artana',
+		pruefe: function (z) {
+			check('englisch | Auswahl greift',
+				z.liste.join(',') === 'gironde,artana', z.liste.join(','));
+			check('englisch | Zahl im Info-Kasten stimmt',
+				z.anzahl === 'two', 'Zahl "' + z.anzahl + '"');
+		}
+	}
+];
+
+(function next(i) {
+	if (i >= FAELLE.length) {
+		lines.push('DONE ' + pass + ' bestanden, ' + fail + ' fehlgeschlagen');
+		document.getElementById('results').textContent = lines.join('\n');
+		return;
+	}
+	var fall = FAELLE[i];
+	lade(fall.url, function (z) {
+		if (z.fehler) {
+			check(fall.name + ' | Fassung geladen', false, z.fehler);
+		} else {
+			fall.pruefe(z);
+		}
+		next(i + 1);
+	});
+})(0);
+</script>
+</body>
+</html>

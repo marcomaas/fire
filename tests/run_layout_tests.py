@@ -34,7 +34,7 @@ PORT = 8791
 # mehr Rahmen, aber ohne auf die Kartenkacheln zu warten.
 SUITES = [
     ("tests/layout.test.html", 8000),
-    ("tests/routing.test.html", 12000),
+    ("tests/routing.test.html", 20000),
 ]
 
 # Chrome an den Orten, an denen er auf einem Mac und auf einem CI-Laeufer liegt.
@@ -67,20 +67,34 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
 
 
 def serve():
+    """Startet den Testserver und gibt (Server, Port) zurueck.
+
+    Weicht auf den naechsten freien Port aus. Ein voriger Lauf kann den Port noch
+    im Zustand TIME_WAIT halten oder ein haengender Prozess ihn belegen — der Lauf
+    scheiterte dann mit "Address already in use", was wie ein Testfehler aussieht
+    und keiner ist.
+    """
     handler = functools.partial(QuietHandler, directory=str(ROOT))
-    server = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), handler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    return server
+    letzter = None
+    for port in range(PORT, PORT + 20):
+        try:
+            server = http.server.ThreadingHTTPServer(("127.0.0.1", port), handler)
+        except OSError as err:
+            letzter = err
+            continue
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        return server, port
+    raise SystemExit(f"Kein freier Port zwischen {PORT} und {PORT + 19}: {letzter}")
 
 
-def run_suite(chrome, path, budget):
+def run_suite(chrome, port, path, budget):
     """Fuehrt eine Testseite aus und gibt (Fehlerzeilen, Zusammenfassung) zurueck.
 
     Bei einem Abbruch ist die Zusammenfassung None — der Aufrufer wertet das als
     Fehlschlag, nicht als "keine Fehler gefunden".
     """
-    url = f"http://127.0.0.1:{PORT}/{path}"
+    url = f"http://127.0.0.1:{port}/{path}"
     result = subprocess.run(
         [
             chrome,
@@ -116,7 +130,7 @@ def run_suite(chrome, path, budget):
     lines = [line.strip() for line in report.splitlines() if line.strip()]
 
     if not any(line.startswith("DONE") for line in lines):
-        print(f"{path}: Testlauf unvollstaendig - kein DONE. Zeitbudget zu klein?",
+        print(f"{path}: Testlauf unvollständig - kein DONE. Zeitbudget zu klein?",
               file=sys.stderr)
         print(report[-2000:], file=sys.stderr)
         return [], None
@@ -129,11 +143,11 @@ def run_suite(chrome, path, budget):
 def main():
     chrome = find_chrome()
     if not chrome:
-        print("Chrome nicht gefunden - Browser-Tests uebersprungen.", file=sys.stderr)
+        print("Chrome nicht gefunden - Browser-Tests übersprungen.", file=sys.stderr)
         print("Gesucht an:", ", ".join(CHROME_CANDIDATES), file=sys.stderr)
         return 0  # Kein Browser ist kein Testfehler.
 
-    server = serve()
+    server, port = serve()
     schlecht = False
     try:
         for path, budget in SUITES:
@@ -141,7 +155,7 @@ def main():
                 print(f"{path}: Testseite fehlt.", file=sys.stderr)
                 schlecht = True
                 continue
-            failures, summary = run_suite(chrome, path, budget)
+            failures, summary = run_suite(chrome, port, path, budget)
             for line in failures:
                 print(line)
             name = Path(path).name

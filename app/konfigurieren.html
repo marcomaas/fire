@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+	<meta charset="utf-8">
+	<title>Waldbrand-Grafik einrichten — Einbettungscode erzeugen</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="description" content="Auswahl der gezeigten Brände festlegen und den passenden Einbettungscode erzeugen.">
+	<meta name="robots" content="noindex">
+
+	<link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+	<link rel="stylesheet" href="assets/vendor/fonts/fonts.css">
+
+	<style>
+		/* Farben, Schriften und Abstände aus dem Datenfreunde Design System:
+		   suva-df/datenfreunde-design-system, material/design-tokens.json */
+		:root {
+			--color-black: #262626;
+			--color-yellow: #f2c029;
+			--color-blue: #65768c;
+			--color-white: #ffffff;
+			--color-grey: #cccccc;
+			--font-headline: 'Archivo', sans-serif;
+			--font-body: 'Source Sans Pro', sans-serif;
+			--font-weight-bold: 700;
+			--spacing-sm: 15px;
+			--spacing-md: 30px;
+			--spacing-lg: 50px;
+			--border-width-deco: 4px;
+			--code-backdrop: #f5f3f0;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			background: var(--color-white);
+			color: var(--color-black);
+			font-family: var(--font-body), sans-serif;
+			font-size: 16px;
+			line-height: 1.55;
+			-webkit-font-smoothing: antialiased;
+		}
+
+		.wrap { max-width: 1120px; margin: 0 auto; padding: var(--spacing-md) var(--spacing-sm) var(--spacing-lg); }
+
+		header.page {
+			border-bottom: 2px solid var(--color-black);
+			padding-bottom: var(--spacing-sm);
+			margin-bottom: var(--spacing-md);
+			display: flex;
+			align-items: center;
+			gap: 14px;
+			flex-wrap: wrap;
+		}
+
+		header.page img { height: 26px; }
+
+		h1 {
+			font-family: var(--font-headline);
+			font-size: 28px;
+			font-weight: var(--font-weight-bold);
+			text-transform: uppercase;
+			margin: 0;
+		}
+
+		h1 .subject { border-bottom: var(--border-width-deco) solid var(--color-yellow); }
+
+		h2 {
+			font-family: var(--font-headline);
+			font-size: 15px;
+			font-weight: var(--font-weight-bold);
+			text-transform: uppercase;
+			letter-spacing: 0.06em;
+			margin: 0 0 8px;
+		}
+
+		p { margin: 0 0 var(--spacing-sm); max-width: 68ch; }
+		a { color: var(--color-black); text-underline-offset: 2px; }
+		a:hover { text-decoration-color: var(--color-yellow); text-decoration-thickness: 3px; }
+
+		.lede {
+			font-size: 18px;
+			border-left: var(--border-width-deco) solid var(--color-yellow);
+			padding-left: 14px;
+		}
+
+		/* Bedienung links, Vorschau rechts. Die Vorschau ist die eigentliche
+		   Antwort auf jede Einstellung, deshalb bekommt sie die größere Spalte. */
+		.spalten {
+			display: flex;
+			gap: var(--spacing-md);
+			align-items: flex-start;
+		}
+
+		.bedienung { flex: 0 0 320px; min-width: 0; }
+		.vorschau { flex: 1 1 auto; min-width: 0; }
+
+		fieldset {
+			border: 2px solid var(--color-black);
+			padding: 12px 14px 14px;
+			margin: 0 0 var(--spacing-sm);
+		}
+
+		legend {
+			font-family: var(--font-headline);
+			font-size: 12px;
+			font-weight: var(--font-weight-bold);
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+			padding: 0 6px;
+		}
+
+		label.zeile {
+			display: flex;
+			align-items: baseline;
+			gap: 8px;
+			padding: 3px 0;
+			cursor: pointer;
+		}
+
+		label.zeile input { margin: 0; flex: 0 0 auto; }
+		label.zeile .zusatz { color: var(--color-blue); font-size: 13px; }
+
+		.feld { display: block; margin-bottom: 10px; }
+		.feld:last-child { margin-bottom: 0; }
+		.feld > span {
+			display: block;
+			font-size: 12px;
+			font-weight: var(--font-weight-bold);
+			text-transform: uppercase;
+			letter-spacing: 0.07em;
+			color: var(--color-blue);
+			margin-bottom: 3px;
+		}
+
+		select, input[type="number"] {
+			width: 100%;
+			font-family: inherit;
+			font-size: 14px;
+			color: var(--color-black);
+			background: var(--color-white);
+			border: 1px solid var(--color-black);
+			border-radius: 0;
+			padding: 6px 8px;
+		}
+
+		.masse { display: flex; gap: 8px; }
+		.masse > label { flex: 1 1 0; }
+
+		.hinweis {
+			font-size: 14px;
+			color: var(--color-blue);
+			margin-top: 6px;
+		}
+
+		.warnung {
+			font-size: 14px;
+			border-left: var(--border-width-deco) solid var(--color-yellow);
+			padding: 6px 0 6px 10px;
+			margin-top: 10px;
+		}
+
+		iframe.probe {
+			border: 2px solid var(--color-black);
+			display: block;
+			max-width: 100%;
+		}
+
+		.rahmen-fluid { width: 100%; max-width: 960px; aspect-ratio: 16 / 9; }
+		.rahmen-fluid iframe { width: 100%; height: 100%; }
+
+		pre {
+			margin: 12px 0 0;
+			padding: 12px 14px;
+			background: var(--code-backdrop);
+			border: 1px solid var(--color-grey);
+			font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+			font-size: 12.5px;
+			line-height: 1.5;
+			overflow-x: auto;
+			white-space: pre;
+		}
+
+		button {
+			font-family: var(--font-body);
+			font-size: 14px;
+			font-weight: var(--font-weight-bold);
+			color: var(--color-black);
+			background: var(--color-white);
+			border: 2px solid var(--color-black);
+			border-radius: 0;
+			padding: 7px 14px;
+			cursor: pointer;
+			margin-top: 10px;
+		}
+
+		button:hover { background: var(--color-yellow); }
+
+		.status { font-size: 14px; color: var(--color-blue); margin-left: 10px; }
+
+		footer.page {
+			margin-top: var(--spacing-lg);
+			padding-top: var(--spacing-sm);
+			border-top: 2px solid var(--color-black);
+			font-size: 14px;
+			color: var(--color-blue);
+		}
+
+		@media (max-width: 900px) {
+			h1 { font-size: 22px; }
+			.spalten { flex-direction: column; }
+			.bedienung { flex: 1 1 auto; width: 100%; }
+		}
+	</style>
+</head>
+<body>
+<div class="wrap">
+
+	<header class="page">
+		<a href="https://www.datenfreunde.com/" target="_blank" rel="noopener" title="Datenfreunde">
+			<img src="assets/img/df-logo.svg" alt="Datenfreunde">
+		</a>
+		<h1><span class="subject">Waldbrand-Grafik</span> einrichten</h1>
+	</header>
+
+	<p class="lede">
+		Hier wird festgelegt, welche Brände eine eingebettete Fassung zeigt. Die Einstellungen stehen
+		im erzeugten Code — die Grafik selbst bekommt keine Bedienelemente dafür, damit im Artikel
+		nichts verstellt werden kann.
+	</p>
+
+	<p>
+		Wer die Grafik ohne Einschränkung einbettet, zeigt alle Brände und braucht diese Seite nicht.
+		Sie ist für den Fall gedacht, dass ein Artikel nur einen Teil der Brände behandelt und die
+		übrigen dort nur ablenken. In der <a href="index-de.html" target="_blank">vollständigen Anwendung</a> auf
+		<code>apps.datenfreunde.com</code> sind immer alle Brände wählbar; die eingebettete Fassung
+		verweist von der Herkunftszeile dorthin.
+	</p>
+
+	<div class="spalten">
+		<div class="bedienung">
+			<fieldset>
+				<legend>Gezeigte Brände</legend>
+				<div id="brandliste"></div>
+				<div class="hinweis" id="brand-hinweis"></div>
+			</fieldset>
+
+			<fieldset>
+				<legend>Beim Öffnen</legend>
+				<label class="feld">
+					<span>Brand</span>
+					<select id="start-fire"></select>
+				</label>
+				<label class="feld">
+					<span>Größenvergleich</span>
+					<select id="start-city"></select>
+				</label>
+				<div class="hinweis">
+					Der Vergleich wird beim Laden eingeblendet. Der Kartenausschnitt fasst dann Brand und
+					Stadtumriss — bei einem kleinen Brand neben einer großen Stadt zoomt er dafür heraus.
+				</div>
+			</fieldset>
+
+			<fieldset>
+				<legend>Format und Sprache</legend>
+				<label class="feld">
+					<span>Format</span>
+					<select id="format">
+						<option value="960x540">Querformat 960 × 540</option>
+						<option value="400x720">Hochformat 400 × 720</option>
+						<option value="fluid">Mitwachsend, 16 : 9</option>
+						<option value="eigen">Eigene Maße</option>
+					</select>
+				</label>
+				<div class="masse" id="eigene-masse" hidden>
+					<label class="feld"><span>Breite</span><input type="number" id="breite" value="960" min="200" max="2400" step="10"></label>
+					<label class="feld"><span>Höhe</span><input type="number" id="hoehe" value="540" min="200" max="1600" step="10"></label>
+				</div>
+				<label class="feld">
+					<span>Sprache</span>
+					<select id="sprache">
+						<option value="de">Deutsch</option>
+						<option value="en">Englisch</option>
+					</select>
+				</label>
+				<div class="warnung" id="format-warnung" hidden></div>
+			</fieldset>
+		</div>
+
+		<div class="vorschau">
+			<h2>Vorschau</h2>
+			<p class="hinweis" id="vorschau-hinweis"></p>
+			<div id="probe-halter"></div>
+
+			<h2 style="margin-top:var(--spacing-md)">Einbettungscode</h2>
+			<pre id="code">…</pre>
+			<button type="button" id="kopieren">Code kopieren</button>
+			<span class="status" id="kopier-status" role="status"></span>
+
+			<h2 style="margin-top:var(--spacing-md)">Direkte Adresse</h2>
+			<p class="hinweis">Zum Prüfen im Browser oder für einen Verweis ohne Rahmen.</p>
+			<pre id="adresse">…</pre>
+		</div>
+	</div>
+
+	<footer class="page">
+		Programmcode unter <a href="https://github.com/marcomaas/fire/blob/master/LICENSE" target="_blank" rel="noopener">MIT-Lizenz</a>
+		— die Daten stehen unter ihren eigenen Lizenzen, siehe im Info-Kasten der Anwendung.<br>
+		<a href="beispiel.html">Einbettungsbeispiele</a> ·
+		<a href="https://www.datenfreunde.com/impressum" target="_blank" rel="noopener">Impressum der Datenfreunde</a>
+	</footer>
+
+</div>
+
+<script src="assets/data/fires.js"></script>
+<script src="assets/data/cities.js"></script>
+<script>
+(function () {
+	'use strict';
+
+	/* Adresse der veröffentlichten Fassung. Die Vorschau lädt bewusst die lokale
+	   Datei, der ausgegebene Code die veröffentlichte — sonst zeigte der Code
+	   beim Entwickeln auf localhost. */
+	var BASIS = 'https://apps.datenfreunde.com/';
+
+	var el = function (id) { return document.getElementById(id); };
+
+	var zustand = {
+		gewaehlt: _fires.map(function (f) { return f.slug; }),
+		start: _fires[0].slug,
+		stadt: '',
+		format: '960x540',
+		breite: 960,
+		hoehe: 540,
+		sprache: 'de'
+	};
+
+	function name(fire) { return fire.name[zustand.sprache] || fire.name.de; }
+	function stadtName(city) { return city.label[zustand.sprache] || city.label.de; }
+
+	function baueBrandliste() {
+		var halter = el('brandliste');
+		halter.textContent = '';
+		_fires.forEach(function (f) {
+			var label = document.createElement('label');
+			label.className = 'zeile';
+			var box = document.createElement('input');
+			box.type = 'checkbox';
+			box.value = f.slug;
+			box.checked = zustand.gewaehlt.indexOf(f.slug) !== -1;
+			box.addEventListener('change', function () {
+				if (box.checked) {
+					if (zustand.gewaehlt.indexOf(f.slug) === -1) zustand.gewaehlt.push(f.slug);
+				} else {
+					zustand.gewaehlt = zustand.gewaehlt.filter(function (s) { return s !== f.slug; });
+				}
+				/* Reihenfolge aus den Daten halten, damit der erzeugte Code nicht von
+				   der Klickfolge abhängt. */
+				zustand.gewaehlt = _fires
+					.map(function (x) { return x.slug; })
+					.filter(function (s) { return zustand.gewaehlt.indexOf(s) !== -1; });
+				nachAenderung();
+			});
+			var text = document.createElement('span');
+			text.textContent = name(f);
+			var zusatz = document.createElement('span');
+			zusatz.className = 'zusatz';
+			zusatz.textContent = f.closed ? 'abgeschlossen' : 'läuft';
+			label.appendChild(box);
+			label.appendChild(text);
+			label.appendChild(zusatz);
+			halter.appendChild(label);
+		});
+	}
+
+	function baueStartfelder() {
+		var fires = el('start-fire');
+		fires.textContent = '';
+		var auswahl = zustand.gewaehlt.length ? zustand.gewaehlt : _fires.map(function (f) { return f.slug; });
+		auswahl.forEach(function (slug) {
+			var f = _fires.filter(function (x) { return x.slug === slug; })[0];
+			if (!f) return;
+			var o = document.createElement('option');
+			o.value = slug;
+			o.textContent = name(f);
+			fires.appendChild(o);
+		});
+		/* Steht der bisherige Startbrand nicht mehr zur Wahl, rückt der erste nach.
+		   Ohne das zeigte der Code einen Anker auf einen ausgefilterten Brand — die
+		   Anwendung fiele darauf zurück, aber der Code wäre irreführend. */
+		if (auswahl.indexOf(zustand.start) === -1) zustand.start = auswahl[0];
+		fires.value = zustand.start;
+
+		var cities = el('start-city');
+		if (!cities.options.length) {
+			var leer = document.createElement('option');
+			leer.value = '';
+			leer.textContent = 'ohne Vergleich';
+			cities.appendChild(leer);
+			if (typeof _cities !== 'undefined') {
+				_cities.forEach(function (c) {
+					var o = document.createElement('option');
+					o.value = c.slug;
+					o.textContent = stadtName(c);
+					cities.appendChild(o);
+				});
+			}
+		}
+		cities.value = zustand.stadt;
+	}
+
+	function masse() {
+		if (zustand.format === 'fluid') return null;
+		if (zustand.format === 'eigen') return { w: zustand.breite, h: zustand.hoehe };
+		var teile = zustand.format.split('x');
+		return { w: parseInt(teile[0], 10), h: parseInt(teile[1], 10) };
+	}
+
+	function adresse(basis) {
+		var seite = zustand.sprache === 'de' ? '' : 'index-en.html';
+		var query = '';
+		/* Nur einschränken, wenn wirklich eingeschränkt wird. Ein ?nur= mit allen
+		   Bränden hängt eine Angabe an, die nichts tut, und veraltet still, sobald
+		   ein Brand dazukommt: die Einbettung zeigte ihn dann nicht. */
+		if (zustand.gewaehlt.length && zustand.gewaehlt.length < _fires.length) {
+			query = '?nur=' + zustand.gewaehlt.join(',');
+		}
+		var anker = '#' + zustand.start + (zustand.stadt ? '/' + zustand.stadt : '');
+		return basis + seite + query + anker;
+	}
+
+	function titel() {
+		return zustand.sprache === 'de'
+			? 'Waldbrände in Frankreich und Spanien'
+			: 'Wildfires in France and Spain';
+	}
+
+	function baueCode() {
+		var url = adresse(BASIS);
+		var m = masse();
+		if (!m) {
+			return '<div style="aspect-ratio: 16/9; max-width: 960px;">\n'
+				+ '  <iframe src="' + url + '"\n'
+				+ '          style="width:100%;height:100%;border:0" loading="lazy"\n'
+				+ '          title="' + titel() + '"></iframe>\n'
+				+ '</div>';
+		}
+		return '<iframe src="' + url + '"\n'
+			+ '        width="' + m.w + '" height="' + m.h + '" style="border:0" loading="lazy"\n'
+			+ '        title="' + titel() + '"></iframe>';
+	}
+
+	function baueVorschau() {
+		var halter = el('probe-halter');
+		halter.textContent = '';
+		var m = masse();
+		var url = adresse('');
+		var f = document.createElement('iframe');
+		f.className = 'probe';
+		f.setAttribute('title', 'Vorschau: ' + titel());
+		f.src = url || 'index-de.html';
+		if (m) {
+			f.width = m.w;
+			f.height = m.h;
+			halter.appendChild(f);
+			el('vorschau-hinweis').textContent = m.w + ' × ' + m.h + ' Pixel, im Rahmen wie im Artikel.';
+		} else {
+			var box = document.createElement('div');
+			box.className = 'rahmen-fluid';
+			box.appendChild(f);
+			halter.appendChild(box);
+			el('vorschau-hinweis').textContent = 'Volle Breite, Höhe über das Seitenverhältnis 16 : 9.';
+		}
+	}
+
+	function pruefeFormat() {
+		var m = masse();
+		var w = el('format-warnung');
+		if (!m) { w.hidden = true; return; }
+		/* Unter 440 Pixel Höhe treten Auswahlfelder an die Stelle der beiden
+		   Listen, und ab 380 Pixel Höhe abwärts ist das Layout nicht mehr
+		   geprüft. Beides gehört gesagt, bevor jemand 320 Pixel einträgt. */
+		if (m.h < 380 || m.w < 420) {
+			w.hidden = false;
+			w.textContent = 'Unter 420 × 380 Pixel wird das Layout nicht mehr geprüft — es kann dort '
+				+ 'unbrauchbar werden.';
+		} else if (m.h < 440) {
+			w.hidden = false;
+			w.textContent = 'Bei dieser Höhe zeigt die Grafik zwei Auswahlfelder statt der beiden '
+				+ 'Listen. Das ist Absicht: die Listen tragen so wenig Höhe nicht.';
+		} else {
+			w.hidden = true;
+		}
+	}
+
+	function pruefeAuswahl() {
+		var h = el('brand-hinweis');
+		if (!zustand.gewaehlt.length) {
+			h.textContent = 'Kein Brand gewählt — die Grafik zeigt dann alle. Eine leere Karte in '
+				+ 'einem Artikel wäre die schlechtere Antwort.';
+		} else if (zustand.gewaehlt.length === _fires.length) {
+			h.textContent = 'Alle Brände gewählt — der Code enthält deshalb keine Einschränkung und '
+				+ 'zeigt später hinzukommende Brände mit.';
+		} else if (zustand.gewaehlt.length === 1) {
+			h.textContent = 'Ein Brand: die Auswahlliste entfällt praktisch, die Karte bekommt mehr Platz.';
+		} else {
+			h.textContent = zustand.gewaehlt.length + ' von ' + _fires.length + ' Bränden. Später '
+				+ 'hinzukommende Brände erscheinen in dieser Einbettung nicht.';
+		}
+	}
+
+	function nachAenderung() {
+		baueStartfelder();
+		pruefeAuswahl();
+		pruefeFormat();
+		el('code').textContent = baueCode();
+		el('adresse').textContent = adresse(BASIS);
+		baueVorschau();
+		el('kopier-status').textContent = '';
+	}
+
+	el('start-fire').addEventListener('change', function () {
+		zustand.start = this.value;
+		nachAenderung();
+	});
+	el('start-city').addEventListener('change', function () {
+		zustand.stadt = this.value;
+		nachAenderung();
+	});
+	el('format').addEventListener('change', function () {
+		zustand.format = this.value;
+		el('eigene-masse').hidden = this.value !== 'eigen';
+		nachAenderung();
+	});
+	el('breite').addEventListener('input', function () {
+		zustand.breite = parseInt(this.value, 10) || 960;
+		nachAenderung();
+	});
+	el('hoehe').addEventListener('input', function () {
+		zustand.hoehe = parseInt(this.value, 10) || 540;
+		nachAenderung();
+	});
+	el('sprache').addEventListener('change', function () {
+		zustand.sprache = this.value;
+		/* Die Beschriftungen der Brände und Städte wechseln mit. */
+		baueBrandliste();
+		el('start-city').textContent = '';
+		nachAenderung();
+	});
+
+	el('kopieren').addEventListener('click', function () {
+		var text = el('code').textContent;
+		var melde = function (ok) {
+			el('kopier-status').textContent = ok ? 'kopiert' : 'nicht kopiert — bitte von Hand markieren';
+		};
+		if (navigator.clipboard && navigator.clipboard.writeText) {
+			navigator.clipboard.writeText(text).then(function () { melde(true); }, function () { melde(false); });
+			return;
+		}
+		/* Rückfall für Browser ohne Clipboard-Schnittstelle und für Aufrufe ohne
+		   sicheren Kontext — dort ist navigator.clipboard nicht vorhanden. */
+		try {
+			var probe = document.createElement('textarea');
+			probe.value = text;
+			document.body.appendChild(probe);
+			probe.select();
+			melde(document.execCommand('copy'));
+			probe.remove();
+		} catch (e) {
+			melde(false);
+		}
+	});
+
+	baueBrandliste();
+	nachAenderung();
+})();
+</script>
+</body>
+</html>

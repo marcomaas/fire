@@ -238,8 +238,16 @@ class TestKeineFestenZahlenImText(unittest.TestCase):
             "|two|three|four|five|six|seven|eight|nine|ten"
         )
         muster = re.compile(rf"\b({zahlwoerter})\s+(Brände|Bränden|fires)\b")
-        for pfad in eigene_dateien(".html"):
-            for treffer in muster.finditer(pfad.read_text(encoding="utf-8")):
+        # Nur ausgelieferte Seiten. Die Testseiten unter tests/ beschreiben in
+        # ihren Kommentaren vergangene Messungen und sind ohnehin nie öffentlich.
+        for pfad in [d for d in eigene_dateien(".html") if d.is_relative_to(APP)]:
+            # Kommentare bleiben außen vor: dort steht mitunter eine historische
+            # Messung ("gemessen war einer von fünf Bränden sichtbar"), die sich
+            # auf einen vergangenen Zustand bezieht und deshalb nicht veraltet.
+            # Skripte bleiben drin — eine feste Zahl in einer Zeichenkette wäre
+            # genau der Fehler, um den es hier geht.
+            ohne_kommentare = re.sub(r"<!--.*?-->", "", pfad.read_text(encoding="utf-8"), flags=re.S)
+            for treffer in muster.finditer(ohne_kommentare):
                 self.fail(
                     f"{pfad.relative_to(WURZEL)} schreibt die Zahl aus: "
                     f"{treffer.group(0)!r} — sie veraltet mit den Daten"

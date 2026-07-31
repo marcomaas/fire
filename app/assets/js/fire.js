@@ -1106,8 +1106,14 @@ $(document).ready(function () {
      * sie der Leser selbst bestimmen koennen. Mit ?nur= im Verweis waere sie dort
      * genauso eingeschraenkt. */
     var ziel = FULL_APP_URL + (lang === "de" ? "" : "index-en.html") + window.location.hash;
-    $(".leaflet-control-attribution").append(
-      ' · <a href="' + ziel + '" target="_blank" rel="noopener">' + text.fullApp + "</a>",
+
+    /* Ueber addAttribution, nicht per append in das Element: Leaflet baut die
+     * Herkunftszeile bei jeder hinzugefuegten Ebene neu auf. Ein angehaengter
+     * Verweis verschwand dadurch wieder, sobald der erste Brand gezeichnet wurde
+     * — sichtbar war er nur in dem Augenblick zwischen Aufbau und erster
+     * Auswahl, also nie. */
+    map.attributionControl.addAttribution(
+      '<a href="' + ziel + '" target="_blank" rel="noopener">' + text.fullApp + "</a>",
     );
   }
 
