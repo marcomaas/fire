@@ -183,6 +183,10 @@ $(document).ready(function () {
       rangeJoin: " bis ",
       noCompare: "ohne Vergleich",
       nearest: "am nächsten zum Brandort — beim Öffnen eingeblendet",
+      /* Dieselbe Aussage kurz, für die Legende unter der Liste. Die lange Fassung
+       * bleibt im title-Attribut; sichtbar sein muss sie trotzdem, weil ein
+       * Touchscreen keinen Hover kennt. */
+      nearestLegend: "zu diesem Brand vorausgewählt",
       details: "Angaben zum Brand",
       /* Nennt die Eintraege ausserhalb des Fensters mit ihrer Richtung. Nur eine
        * Zahl ohne Richtung liesse offen, wohin gescrollt werden muss — und in
@@ -247,6 +251,7 @@ $(document).ready(function () {
       rangeJoin: " to ",
       noCompare: "no comparison",
       nearest: "closest to the fire — shown on opening",
+      nearestLegend: "preselected for this fire",
       details: "Fire details",
       hiddenBelow: function (n) {
         return n + " more ↓";
@@ -459,11 +464,25 @@ $(document).ready(function () {
     fillColor: "#BE1313",
     fillOpacity: 0.45,
   };
-  var historyPolyStyle = {
+  /* Erreichte Fläche — in Brandrot, nicht als blasser Schatten.
+   *
+   * Vorher stand hier ein dunkelbraunes Feld mit 12 Prozent Deckkraft. Im
+   * Morph-Modus führte das zu einer falschen Aussage: der Überblend-Algorithmus
+   * verschiebt jeden Stützpunkt geradlinig auf seinen Nachfolger, und bei einem
+   * Flächensprung wie in der Gironde (5.763 auf 26.008 ha) liegt die Zwischenform
+   * nicht zwischen beiden Umrissen, sondern daneben. Gemessen: bei 118 von 132
+   * Bildern lag schon verbrannte Fläche außerhalb des roten Umrisses, an einer
+   * Stelle alle 231 Prüfpunkte — die Grafik zeigte, wie das Feuer von der Fläche
+   * wegwandert, die es verbrannt hatte.
+   *
+   * Verbrannte Fläche verschwindet nicht wieder. Sie bleibt deshalb rot, und der
+   * Morph kann nur hinzufügen. Die aktuelle Front ist an ihrer Randlinie
+   * erkennbar, nicht mehr daran, dass alles davor verblasst. */
+  var reachedPolyStyle = {
     stroke: false,
     fill: true,
-    fillColor: "#221100",
-    fillOpacity: 0.12,
+    fillColor: "#BE1313",
+    fillOpacity: 0.55,
   };
   /* Der Stadtumriss liegt ueber der Brandflaeche. Bei 0,35 Deckkraft zog das
    * weisse Fuellen der roten Flaeche die Farbe, gerade in der Schnittmenge - und
@@ -744,6 +763,13 @@ $(document).ready(function () {
     return group;
   }
 
+  /* Der erreichte Stand samt seiner Nebenflächen. Vorher blieb im Morph-Modus nur
+   * die Hauptfläche als Schatten liegen; die Streufeuer daneben — bei zerstreuten
+   * Bränden ein erheblicher Teil der Fläche — verschwanden beim Übergang ganz. */
+  function reachedFootprint(step) {
+    return footprintLayer(step, reachedPolyStyle.fillOpacity);
+  }
+
   function playCrossfade() {
     var index = 0;
     var target = firePolyStyle.fillOpacity;
@@ -811,9 +837,10 @@ $(document).ready(function () {
       var to = fire.steps[index + 1];
       var timing = stepTiming(from, to);
 
-      /* Der erreichte Stand bleibt als blasser Schatten liegen, damit das
-       * Wachstum auch am Ende noch nachvollziehbar ist. */
-      historyLayer.addLayer(new L.Polygon(from.polygon, historyPolyStyle));
+      /* Der erreichte Stand bleibt als Brandfläche liegen — samt Nebenflächen.
+       * Der Überblend-Umriss darf sich darüber bewegen, wie er will; verbrannte
+       * Fläche bleibt dann verbrannt, und die Bewegung fügt nur hinzu. */
+      historyLayer.addLayer(reachedFootprint(from));
 
       var frameInStep = 0;
 
