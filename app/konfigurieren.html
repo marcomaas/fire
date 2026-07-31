@@ -463,7 +463,7 @@
 		var url = adresse(BASIS);
 		var m = masse();
 		if (!m) {
-			return '<div style="aspect-ratio: 16/9; max-width: 960px;">\n'
+			return '<div style="aspect-ratio: 16/9; max-width: 960px; min-height: 480px;">\n'
 				+ '  <iframe src="' + url + '"\n'
 				+ '          style="width:100%;height:100%;border:0" loading="lazy"\n'
 				+ '          title="' + titel() + '"></iframe>\n'
@@ -500,7 +500,17 @@
 	function pruefeFormat() {
 		var m = masse();
 		var w = el('format-warnung');
-		if (!m) { w.hidden = true; return; }
+		if (!m) {
+			/* Mitwachsend: es gibt keine Höhe zu prüfen, wohl aber etwas zu sagen.
+			   16:9 unterschreitet die 500 Pixel Höhe schon unter etwa 890 Pixel
+			   Breite — in jeder normalen Artikelspalte. Vorher schwieg die Prüfung
+			   hier, und das war der Fall, der am häufigsten vorkommt. */
+			w.hidden = false;
+			w.textContent = 'Bei 16 : 9 unterschreitet der Rahmen die 500 Pixel Höhe ab etwa '
+				+ '890 Pixel Breite — dann zeigt die Grafik Auswahlfelder statt Listen. Der Code '
+				+ 'unten gibt deshalb min-height: 480px mit.';
+			return;
+		}
 		/* Zwei Schwellen, und sie liegen nicht beieinander: ab 500 Pixel Höhe
 		   abwärts treten Auswahlfelder an die Stelle der beiden Listen, ab 440 Pixel
 		   Höhe (oder 460 Pixel Breite) wird zusätzlich die Bedienleiste kompakt und

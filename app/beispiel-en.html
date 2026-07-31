@@ -200,6 +200,22 @@
         title="Wildfires in France and Spain"&gt;&lt;/iframe&gt;</pre>
 
 	<h2>
+		Flat and wide
+		<span class="meta">600 × 450 · the classic info box</span>
+	</h2>
+	<p>
+		Below 500 pixels of height <strong>two select fields</strong> take the place of the two
+		lists, and the secondary figures move behind a disclosure. That is deliberate: at this
+		height the lists showed one entry each, and the map — the actual content — was left with
+		almost no room. The selection stays complete, it is only folded up.
+	</p>
+	<iframe class="demo" src="index-en.html#gironde/bordeaux" width="600" height="450"
+		title="Wildfires in France and Spain, flat landscape" loading="lazy"></iframe>
+<pre>&lt;iframe src="https://apps.datenfreunde.com/index-en.html#gironde/bordeaux"
+        width="600" height="450" style="border:0" loading="lazy"
+        title="Wildfires in France and Spain"&gt;&lt;/iframe&gt;</pre>
+
+	<h2>
 		Portrait
 		<span class="meta">400 × 720 · for narrow columns and mobile views</span>
 	</h2>
@@ -250,7 +266,7 @@
 		<iframe class="demo" src="index-en.html#artana" style="width:100%;height:100%"
 			title="Wildfires in France and Spain, fluid" loading="lazy"></iframe>
 	</div>
-<pre>&lt;div style="aspect-ratio: 16/9; max-width: 960px;"&gt;
+<pre>&lt;div style="aspect-ratio: 16/9; max-width: 960px; min-height: 480px;"&gt;
   &lt;iframe src="https://apps.datenfreunde.com/index-en.html#artana"
           style="width:100%;height:100%;border:0" loading="lazy"
           title="Wildfires in France and Spain"&gt;&lt;/iframe&gt;
@@ -266,6 +282,25 @@
 		not checked.
 		To show only some of the fires, <a href="konfigurieren.html">configure the embed</a>
 		— the page is in German, the generated code is not.
+	</div>
+
+	<div class="hint">
+		<strong>What changes with the frame size.</strong>
+		Two thresholds, and they are not close together. Below <strong>500 pixels of height</strong>
+		two select fields take the place of the two lists. Below <strong>440 pixels of height or
+		460 pixels of width</strong> the figure panel also becomes compact: area and date share one
+		line, the timeline sits below them, and the secondary figures move behind a disclosure. Both
+		affect more embeds than one would think — a fluid 16:9 frame drops below 500 pixels of
+		height at roughly 890 pixels of width, so in any ordinary article column. If you embed via
+		an aspect ratio, give the frame a <code>min-height</code> of 480 pixels.
+	</div>
+
+	<div class="hint">
+		<strong>The preselected comparison.</strong>
+		For every fire the closest of the five cities is preselected and shown on opening — marked
+		in the list by a blue square, with a line above it that explains what the square means. To
+		start without a comparison, append <code>/none</code> to the anchor:
+		<code>#gironde/none</code>. For a different city, name it: <code>#gironde/berlin</code>.
 	</div>
 
 	<footer class="page">

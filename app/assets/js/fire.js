@@ -187,6 +187,11 @@ $(document).ready(function () {
        * bleibt im title-Attribut; sichtbar sein muss sie trotzdem, weil ein
        * Touchscreen keinen Hover kennt. */
       nearestLegend: "zu diesem Brand vorausgewählt",
+      buttonTitle: {
+        play: "Verlauf abspielen",
+        pause: "Abspielen anhalten",
+        again: "Verlauf erneut abspielen",
+      },
       details: "Angaben zum Brand",
       /* Nennt die Eintraege ausserhalb des Fensters mit ihrer Richtung. Nur eine
        * Zahl ohne Richtung liesse offen, wohin gescrollt werden muss — und in
@@ -252,6 +257,11 @@ $(document).ready(function () {
       noCompare: "no comparison",
       nearest: "closest to the fire — shown on opening",
       nearestLegend: "preselected for this fire",
+      buttonTitle: {
+        play: "Play the sequence",
+        pause: "Pause playback",
+        again: "Play the sequence again",
+      },
       details: "Fire details",
       hiddenBelow: function (n) {
         return n + " more ↓";
@@ -291,6 +301,16 @@ $(document).ready(function () {
     var hours = Math.round(millis / 3600000);
     if (hours < 48) return text.hours(hours);
     return text.days(Math.round(hours / 24));
+  }
+
+  /* Systemeinstellung "reduzierte Bewegung". Wird bei jedem Aufruf gelesen und
+   * nicht einmal gespeichert: die Einstellung laesst sich im Betriebssystem
+   * umstellen, waehrend die Seite offen ist. */
+  function reducedMotion() {
+    return (
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
   }
 
   /* ---------- Zeitstrahl ---------- */
@@ -562,8 +582,10 @@ $(document).ready(function () {
       cityLabel = null;
     }
     activeCity = null;
-    $("#map-compare a").removeClass("highlight");
-    $('#map-compare a[data-city=""]').addClass("highlight");
+    $("#map-compare a").removeClass("highlight").removeAttr("aria-current");
+    $('#map-compare a[data-city=""]')
+      .addClass("highlight")
+      .attr("aria-current", "true");
     syncPickers();
     if (refit === true && fire) fitToFire(fire);
     syncHash();
@@ -611,8 +633,10 @@ $(document).ready(function () {
     }).addTo(map);
     activeCity = slug;
     syncPickers();
-    $("#map-compare a").removeClass("highlight");
-    $('#map-compare a[data-city="' + slug + '"]').addClass("highlight");
+    $("#map-compare a").removeClass("highlight").removeAttr("aria-current");
+    $('#map-compare a[data-city="' + slug + '"]')
+      .addClass("highlight")
+      .attr("aria-current", "true");
 
     /* Ausschnitt so setzen, dass Brand UND Stadtumriss hineinpassen. Ohne das
      * ist der Vergleich bei kleinen Bränden unsichtbar: die Karte steht auf der
@@ -698,6 +722,9 @@ $(document).ready(function () {
 
   function setButtonState(state) {
     $("#map-startstop-label").text(text[state] || text.play);
+    /* Auch das title-Attribut, nicht nur die Beschriftung: es stand fest auf
+     * "Verlauf abspielen", auch wenn der Knopf gerade "Pause" hiess. */
+    $("#map-startstop").attr("title", text.buttonTitle[state] || text.buttonTitle.play);
   }
 
   function stop() {
@@ -961,8 +988,12 @@ $(document).ready(function () {
     $("#fire-steps").text(text.steps(fire.steps.length));
     $("#fire-note").text(fire.steps.length < 2 ? text.single : "");
 
-    $("#map-fires a").removeClass("highlight");
-    $('#map-fires a[data-fire="' + fire.slug + '"]').addClass("highlight");
+    /* aria-current zusaetzlich zur Klasse: die Hervorhebung war allein farbig,
+     * ein Screenreader nannte fuenf gleichwertige Verweise. */
+    $("#map-fires a").removeClass("highlight").removeAttr("aria-current");
+    $('#map-fires a[data-fire="' + fire.slug + '"]')
+      .addClass("highlight")
+      .attr("aria-current", "true");
     markDefaultCity();
     syncPickers();
     updateScrollHints();
@@ -991,7 +1022,18 @@ $(document).ready(function () {
     }
     syncHash();
 
-    play();
+    /* Kein Autostart, wenn das System reduzierte Bewegung verlangt. Der letzte
+     * Stand steht dann sofort da — die Aussage der Grafik ist die Fläche, nicht
+     * die Bewegung — und wer den Verlauf sehen will, drückt den Knopf. Eine
+     * Animation, die von selbst losläuft und länger als fünf Sekunden dauert,
+     * braucht nach WCAG 2.2.2 ohnehin einen Weg, sie anzuhalten; hier ist der
+     * bessere Weg, sie gar nicht zu erzwingen. */
+    if (reducedMotion()) {
+      finish(true);
+      setButtonState("play");
+    } else {
+      play();
+    }
   }
 
   /* Die Voreinstellung steht je Brand in den Daten (Feld compare, gesetzt von
@@ -1273,6 +1315,17 @@ $(document).ready(function () {
    * Kopfzeile ausgeblendet ist — und damit der Weg, auf dem die Lizenz- und
    * Quellenangaben auch beim Einbetten erreichbar bleiben. Delegiert
    * gebunden, weil Leaflet die Herkunftsangabe selbst erzeugt. */
+  /* Escape schliesst, was offen ist. Vorher fuehrte nur der Schliessen-Link
+   * heraus — bei einem Kasten, der die halbe Karte bedeckt, ist das die
+   * Bedienung, die jeder zuerst versucht. */
+  $(document).on("keydown", function (evt) {
+    if (evt.key !== "Escape" && evt.keyCode !== 27) return;
+    var main = $("#main");
+    if (main.hasClass("show-info") || main.hasClass("show-share")) {
+      main.removeClass("show-info show-share");
+    }
+  });
+
   $(document).on("click", "#button-info, .attr-info", function (evt) {
     evt.preventDefault();
     $("#main").removeClass("show-share").toggleClass("show-info");
@@ -1309,6 +1362,19 @@ $(document).ready(function () {
 
   $("#fire-details-label").text(text.details);
   applyCardMode();
+
+  /* Der Sprachwechsel nimmt Auswahl und Anker mit. Vorher trug der Verweis nur
+   * den Dateinamen: wer bei #artana/madrid auf EN klickte, landete beim ersten
+   * Brand mit Voreinstellung und musste sich neu zurechtfinden.
+   *
+   * Beim Klick gesetzt, nicht einmal beim Laden: der Anker aendert sich mit jeder
+   * Auswahl (syncHash schreibt ihn per replaceState), ein einmal gesetzter Verweis
+   * traegt danach den Stand von vorhin. */
+  $(document).on("click", "#nav a[href*='index-']", function () {
+    var a = $(this);
+    var basis = a.attr("href").split("?")[0].split("#")[0];
+    a.attr("href", basis + window.location.search + window.location.hash);
+  });
 
   if (window.top !== window) {
     $("html").addClass("in-frame");

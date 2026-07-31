@@ -456,12 +456,17 @@ nav#nav a:hover {
 }
 
 /* Waehrend des Ablaufs zurueckhaltend, damit die Flaeche im Vordergrund steht. */
+/* Waehrend des Abspielens tritt der Knopf zurueck, aber er bleibt lesbar. Bei
+ * opacity 0.35 ergab die Schrift auf dem Knopfgrund rund 2,2:1 — der einzige Weg,
+ * die Animation zu stoppen, war genau dann am schwaechsten, wenn er gebraucht
+ * wird. Jetzt wird nur die Flaeche durchscheinend, Schrift und Rahmen bleiben
+ * voll deckend. */
 #map-container.playing #map-startstop {
-	opacity: 0.35;
+	background: rgba(255, 255, 255, 0.55);
 }
 
 #map-container.playing #map-startstop:hover {
-	opacity: 1;
+	background: var(--color-white);
 }
 
 #map-startstop .glyph {
@@ -1215,4 +1220,18 @@ html.in-frame #main {
 
 .leaflet-bar a {
 	color: var(--color-black) !important;
+}
+
+
+/* ---------- Bewegungsempfindlichkeit ---------- */
+
+/* Wer im System reduzierte Bewegung eingestellt hat, bekommt keine von selbst
+ * startende Animation. Der Abspielknopf bleibt, der Verlauf ist also weiter
+ * erreichbar — nur nicht mehr aufgezwungen. fire.js liest diese Einstellung
+ * ueber matchMedia und ueberspringt den Autostart; hier steht die Seite der
+ * Regel, die keine Bewegung mehr ankuendigt. WCAG 2.2.2 (Pause, Stop, Hide). */
+@media (prefers-reduced-motion: reduce) {
+	#timeline-head {
+		transition: none;
+	}
 }

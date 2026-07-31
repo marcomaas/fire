@@ -114,6 +114,16 @@ function zustand(doc, win) {
 		anzahl: (doc.getElementById('info-count') || {}).textContent || '',
 		datum: (doc.getElementById('map-date') || {}).textContent || '',
 		daten: win._fires || null,
+		sprachLink: (function () {
+			var a = doc.querySelector("#nav a[href*='index-']");
+			if (!a) return null;
+			/* Klick auslösen, ohne zu navigieren: der Handler setzt das href, das
+			 * Vorgabeverhalten wird verhindert. */
+			var ev = new win.MouseEvent('click', { bubbles: true, cancelable: true });
+			a.addEventListener('click', function (e) { e.preventDefault(); }, { once: true });
+			a.dispatchEvent(ev);
+			return a.getAttribute('href');
+		})(),
 		marke: (doc.querySelector('.city-label span') || {}).textContent || '',
 		farben: farben(doc),
 		adresse: win.location.search + win.location.hash,
@@ -437,6 +447,19 @@ var FAELLE = [
 				});
 			};
 			document.getElementById('frames').appendChild(f);
+		}
+	},
+	{
+		name: 'Sprachwechsel nimmt Auswahl und Anker mit',
+		url: '../app/index-de.html?nur=gironde,artana#artana',
+		pruefe: function (z) {
+			/* Der Verweis wird erst beim Klick gesetzt, weil der Anker sich mit jeder
+			 * Auswahl ändert. Geprüft wird deshalb nach einem Klick, nicht das
+			 * href-Attribut im Ausgangszustand. */
+			check('Sprachwechsel | Verweis trägt Auswahl und Anker',
+				z.sprachLink && z.sprachLink.indexOf('nur=gironde,artana') !== -1 &&
+				z.sprachLink.indexOf('#artana') !== -1,
+				'Verweis "' + z.sprachLink + '"');
 		}
 	},
 	{

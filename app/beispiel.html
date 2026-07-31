@@ -202,6 +202,22 @@
         title="Waldbrände in Frankreich und Spanien"&gt;&lt;/iframe&gt;</pre>
 
 	<h2>
+		Flach und quer
+		<span class="meta">600 × 450 · die klassische Infobox</span>
+	</h2>
+	<p>
+		Unter 500 Pixel Höhe treten <strong>zwei Auswahlfelder</strong> an die Stelle der beiden
+		Listen, und die Nebenangaben rücken hinter einen Aufklapper. Das ist Absicht: bei dieser
+		Höhe zeigten die Listen nur noch je einen Eintrag, und die Karte — der eigentliche Inhalt —
+		bekam kaum Fläche. Die Auswahl bleibt vollständig, sie steht nur zusammengefaltet da.
+	</p>
+	<iframe class="demo" src="index-de.html#gironde/bordeaux" width="600" height="450"
+		title="Waldbrände in Frankreich und Spanien, flaches Querformat" loading="lazy"></iframe>
+<pre>&lt;iframe src="https://apps.datenfreunde.com/#gironde/bordeaux"
+        width="600" height="450" style="border:0" loading="lazy"
+        title="Waldbrände in Frankreich und Spanien"&gt;&lt;/iframe&gt;</pre>
+
+	<h2>
 		Hochformat
 		<span class="meta">400 × 720 · für schmale Spalten und mobile Ansichten</span>
 	</h2>
@@ -253,7 +269,7 @@
 		<iframe class="demo" src="index-de.html#artana" style="width:100%;height:100%"
 			title="Waldbrände in Frankreich und Spanien, mitwachsend" loading="lazy"></iframe>
 	</div>
-<pre>&lt;div style="aspect-ratio: 16/9; max-width: 960px;"&gt;
+<pre>&lt;div style="aspect-ratio: 16/9; max-width: 960px; min-height: 480px;"&gt;
   &lt;iframe src="https://apps.datenfreunde.com/#artana"
           style="width:100%;height:100%;border:0" loading="lazy"
           title="Waldbrände in Frankreich und Spanien"&gt;&lt;/iframe&gt;
@@ -269,6 +285,27 @@
 		Seite. Getestet ist das Layout ab 420 × 380 Pixel; darunter wird es nicht mehr geprüft.
 		Soll die Einbettung nur einen Teil der Brände zeigen, erzeugt
 		<a href="konfigurieren.html">Einbettung einrichten</a> den passenden Code.
+	</div>
+
+	<div class="hint">
+		<strong>Was sich mit der Rahmengröße ändert.</strong>
+		Zwei Schwellen, und sie liegen nicht beieinander. Unter <strong>500 Pixel Höhe</strong>
+		treten zwei Auswahlfelder an die Stelle der beiden Listen. Unter <strong>440 Pixel Höhe
+		oder 460 Pixel Breite</strong> wird zusätzlich die Zahlenanzeige kompakt: Fläche und Datum
+		stehen in einer Zeile, der Zeitstrahl darunter, die Nebenangaben hinter einem Aufklapper.
+		Beides betrifft mehr Einbettungen als man denkt — ein mitwachsender 16:9-Rahmen
+		unterschreitet die 500 Pixel Höhe bereits unter etwa 890 Pixel Breite, also in jeder
+		normalen Artikelspalte. Wer den Rahmen über ein Seitenverhältnis einbindet, sollte deshalb
+		eine <code>min-height</code> von 480 Pixel mitgeben.
+	</div>
+
+	<div class="hint">
+		<strong>Die Vorauswahl beim Öffnen.</strong>
+		Zu jedem Brand ist die nächstgelegene der fünf Städte vorausgewählt und wird beim Öffnen
+		eingeblendet — in der Liste am blauen Viereck erkennbar, mit einer Zeile darüber, die es
+		erklärt. Wer ohne Vergleich starten will, hängt <code>/none</code> an den Anker:
+		<code>#gironde/none</code>. Wer eine andere Stadt möchte, nennt sie:
+		<code>#gironde/berlin</code>.
 	</div>
 
 	<footer class="page">
