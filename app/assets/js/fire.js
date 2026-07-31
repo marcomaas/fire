@@ -1002,8 +1002,7 @@ $(document).ready(function () {
     var unten = 0;
     Array.prototype.forEach.call(ul.children, function (li) {
       var r = li.getBoundingClientRect();
-      if (r.bottom < fenster.top + 1) oben++;
-      else if (r.top < fenster.top - 1) oben++;
+      if (r.top < fenster.top - 1) oben++;
       else if (r.bottom > fenster.bottom + 1) unten++;
     });
     return { oben: oben, unten: unten };
@@ -1056,6 +1055,7 @@ $(document).ready(function () {
 
   $(document).on("scroll", "#map-fires ul, #map-compare ul", updateScrollHints);
   $(window).on("resize", updateScrollHints);
+  $(window).on("resize", applyCardMode);
 
   function buildPickers() {
     $("#map-picker [data-label=fires]").text(text.fires);
@@ -1203,6 +1203,9 @@ $(document).ready(function () {
   buildPickers();
   fillInfoFigures();
   updateScrollHints();
+
+  $("#fire-details-label").text(text.details);
+  applyCardMode();
 
   if (window.top !== window) {
     $("html").addClass("in-frame");

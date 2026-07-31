@@ -194,6 +194,39 @@ function testFrame(page, vp, win, doc) {
 		if (open) route.click();
 	}
 
+	/* 7b. Die Brandfläche liegt nicht hinter den Kästen. Prüfung 8 misst nur, ob
+	 *     der Ausschnitt auf dem Brand sitzt — bei 420×380 war er das, und
+	 *     trotzdem war von der Fläche nichts zu sehen, weil die Zustandsanzeige
+	 *     genau darüber lag. Gemessen wird der Anteil der Umschließung der
+	 *     Brandfläche, der von keinem Kasten belegt ist. Die Summe der
+	 *     Schnittflächen ist dabei exakt, weil Prüfung 4 sicherstellt, dass sich
+	 *     die Kästen nicht gegenseitig überlagern. */
+	var flaeche = doc.querySelector('.leaflet-overlay-pane path');
+	if (flaeche) {
+		var fr = flaeche.getBoundingClientRect();
+		var fBox = { l: fr.left, t: fr.top, r: fr.right, b: fr.bottom };
+		var gesamt = Math.max(1, (fBox.r - fBox.l) * (fBox.b - fBox.t));
+		var belegt = 0;
+		var deckel = [];
+		BOXES.forEach(function (sel) {
+			var el = doc.querySelector(sel);
+			if (!visible(el)) return;
+			var b = rect(el);
+			var x = Math.min(fBox.r, b.r) - Math.max(fBox.l, b.l);
+			var y = Math.min(fBox.b, b.b) - Math.max(fBox.t, b.t);
+			if (x > 0 && y > 0) {
+				belegt += x * y;
+				deckel.push(sel + ' ' + Math.round(x * y / gesamt * 100) + ' %');
+			}
+		});
+		var frei = 1 - belegt / gesamt;
+		check(tag + ' | Brandfläche nicht hinter den Kästen', frei >= 0.5,
+			'nur ' + Math.round(frei * 100) + ' % frei — verdeckt von ' +
+			(deckel.join(', ') || 'nichts') + '; Fläche ' +
+			Math.round(fBox.l) + ',' + Math.round(fBox.t) + ' ' +
+			Math.round(fBox.r - fBox.l) + '×' + Math.round(fBox.b - fBox.t));
+	}
+
 	/* 8. Der Kartenausschnitt sitzt auf dem Brand. Ohne diese Prüfung fiel es
 	 *    nicht auf, dass fitBounds in kleinen Rahmen auf die kleinste Zoomstufe
 	 *    zurückfällt: die Containergröße stand beim Aufruf noch nicht fest, und
@@ -303,15 +336,156 @@ function testFrame(page, vp, win, doc) {
 
 			/* Die Städteliste darf nicht zum Schlitz zusammenfallen. Gemessen war
 			 * sie bei 420×380 einmal 45 Pixel hoch bei 284 Pixeln Inhalt — ein
-			 * Fenster auf einen einzigen Eintrag. */
+			 * Fenster auf einen einzigen Eintrag.
+			 *
+			 * Gezählt werden nur Städte, nicht der Eintrag "ohne Vergleich": bei
+			 * 470×470 war genau er der einzige sichtbare, und ein Kasten, in dem
+			 * nichts als "ohne Vergleich" steht, sagt das Gegenteil von dem, was
+			 * er soll. Die frühere Fassung dieser Prüfung maß seine Höhe als
+			 * Zeilenhöhe und blieb deshalb grün. */
 			var cul = doc.querySelector('#map-compare ul');
-			if (cul && cul.querySelectorAll('li').length) {
-				var zeile = rect(cul.querySelector('li')).h;
-				check(tag + ' | Städteliste zeigt mehr als eine Zeile',
-					rect(cul).h >= zeile * 2 - 1,
-					'Liste ' + Math.round(rect(cul).h) + ' px bei ' +
-					Math.round(zeile) + ' px Zeilenhöhe');
+			var staedte = cul ? cul.querySelectorAll('li:not(.no-compare)') : [];
+			if (staedte.length) {
+				var sichtbareStaedte = 0;
+				var cr = rect(cul);
+				Array.prototype.forEach.call(staedte, function (li) {
+					var r = rect(li);
+					if (r.t >= cr.t - 1 && r.b <= cr.b + 1) sichtbareStaedte++;
+				});
+				check(tag + ' | Städteliste zeigt mindestens zwei Städte',
+					sichtbareStaedte >= 2,
+					sichtbareStaedte + ' von ' + staedte.length + ' Städten sichtbar, ' +
+					'Liste ' + Math.round(cr.h) + ' px bei ' + cul.scrollHeight + ' px Inhalt');
 			}
+		}
+	}
+
+	/* 12b. Die Hinweiszeile nennt, wie viele Einträge außerhalb liegen. Die
+	 *      Abblende sagt nur, DASS es weitergeht; bei fünf Bränden ist der
+	 *      Unterschied zwischen "da fehlt noch was" und "da fehlen zwei" die
+	 *      ganze Auskunft. Geprüft werden beide Listen — die Städteliste ist die,
+	 *      die als erste zu kurz wird — und beide Richtungen: eine Zeile, die
+	 *      eine falsche Zahl nennt, ist schlechter als keine. */
+	if (listenAn) {
+		['#map-fires', '#map-compare'].forEach(function (sel) {
+			var kasten = doc.querySelector(sel);
+			var liste = kasten ? kasten.querySelector('ul') : null;
+			if (!visible(kasten) || !liste) return;
+			var lr = rect(liste);
+			var aussen = 0;
+			Array.prototype.forEach.call(liste.querySelectorAll('li'), function (li) {
+				var r = rect(li);
+				if (r.t < lr.t - 1 || r.b > lr.b + 1) aussen++;
+			});
+			var zeile = kasten.querySelector('.list-hint');
+			if (!aussen) {
+				check(tag + ' | ' + sel + ' ohne verdeckte Einträge ohne Hinweiszeile',
+					!visible(zeile),
+					zeile ? 'Zeile sichtbar mit "' + zeile.textContent.trim() + '"' : '');
+				return;
+			}
+			check(tag + ' | ' + sel + ' Hinweiszeile sichtbar', visible(zeile),
+				aussen + ' außerhalb, aber keine Zeile');
+			if (visible(zeile)) {
+				var genannt = (zeile.textContent.match(/\d+/g) || [])
+					.reduce(function (a, b) { return a + Number(b); }, 0);
+				check(tag + ' | ' + sel + ' Hinweiszeile nennt die Zahl',
+					genannt === aussen,
+					'Zeile "' + zeile.textContent.trim() + '" nennt ' + genannt +
+					', außerhalb sind ' + aussen);
+			}
+		});
+	}
+
+	/* 12c. Die kompakte Zustandsanzeige. Unterhalb der Schwelle im Stylesheet
+	 *      teilen Flächenzahl und Datum eine Zeile, der Zeitstrahl liegt darunter,
+	 *      und die Nebenangaben stehen hinter einem Aufklapper. Oberhalb der
+	 *      Schwelle darf nichts davon greifen — sonst wäre die Auskunft auch dort
+	 *      weggeklappt, wo Platz für sie ist. */
+	var karte = doc.getElementById('map-controls');
+	var aufklapper = doc.getElementById('fire-details');
+	var griff = doc.getElementById('fire-details-label');
+	var beschriftung = doc.getElementById('fire-caption');
+	var kompakt = win.getComputedStyle(karte).getPropertyValue('--compact').trim() === '1';
+	var eineZeile = win.getComputedStyle(karte).getPropertyValue('--compact-row').trim() === '1';
+
+	check(tag + ' | Aufklapper vorhanden', !!aufklapper && !!griff && !!beschriftung);
+
+	/* Zahl und Datum in einer Zeile hängt an der Rahmenhöhe, der Aufklapper auch
+	 * an der Breite: die ausgeschriebene Flächenangabe braucht neben einem Datum
+	 * mehr Platz, als ein 360 Pixel breiter Rahmen dem Kasten lässt. Deshalb zwei
+	 * Schalter und nicht einer. */
+	if (eineZeile) {
+		var zahl = rect(doc.getElementById('map-size'));
+		var datum = rect(doc.getElementById('map-date'));
+		var strahl = rect(doc.getElementById('map-timeline'));
+
+		/* Eine Zeile heißt: sie überlappen senkrecht und stehen nebeneinander. */
+		check(tag + ' | Zahl und Datum in einer Zeile',
+			datum.l >= zahl.r - 1 && datum.t < zahl.b - 1 && datum.b > zahl.t + 1,
+			'Zahl ' + Math.round(zahl.l) + '–' + Math.round(zahl.r) + ' × ' +
+			Math.round(zahl.t) + '–' + Math.round(zahl.b) + ', Datum ' +
+			Math.round(datum.l) + '–' + Math.round(datum.r) + ' × ' +
+			Math.round(datum.t) + '–' + Math.round(datum.b));
+
+		check(tag + ' | Zeitstrahl unter Zahl und Datum',
+			strahl.t >= Math.max(zahl.b, datum.b) - 1,
+			'Zeitstrahl oben ' + Math.round(strahl.t) + ', Zeile endet ' +
+			Math.round(Math.max(zahl.b, datum.b)));
+	}
+
+	/* Gemessen wird die Höhe, nicht die Sichtbarkeit der Beschriftung. Chrome 150
+	 * blendet den Inhalt eines geschlossenen <details> über content-visibility aus
+	 * und liefert für die Kinder darin weiterhin ein Rechteck — eine Prüfung auf
+	 * "unsichtbar" wäre also rot geblieben, obwohl der Kasten korrekt
+	 * zusammengeklappt war (gemessen: details 240×22, also nur der Griff, während
+	 * die Beschriftung 240×81 unterhalb des Kastens meldete). Der Kasten selbst
+	 * lügt nicht: zugeklappt ist er so hoch wie sein Griff. */
+	if (aufklapper && griff && beschriftung) {
+		if (kompakt) {
+			var zu = rect(aufklapper);
+			var kastenZu = rect(karte).h;
+			check(tag + ' | Nebenangaben sind zugeklappt',
+				!aufklapper.open && zu.h <= rect(griff).h + 6,
+				'open=' + aufklapper.open + ', Aufklapper ' + Math.round(zu.h) +
+				' px hoch bei Griff ' + Math.round(rect(griff).h) + ' px');
+
+			check(tag + ' | Aufklapper ist sichtbar und beschriftet',
+				visible(griff) && griff.textContent.trim().length > 0,
+				'sichtbar ' + visible(griff) + ', Text "' + griff.textContent.trim() + '"');
+
+			/* Zugeklappt genügt nicht — es muss sich auch öffnen lassen, sonst
+			 * wäre die Auskunft schlicht weg. Und die Beschriftung muss danach
+			 * innerhalb des Aufklappers liegen, nicht irgendwo. */
+			griff.click();
+			var auf = rect(aufklapper);
+			var cap = rect(beschriftung);
+			check(tag + ' | Aufklappen zeigt die Nebenangaben',
+				aufklapper.open && auf.h > zu.h + 10 &&
+				cap.t >= auf.t - 1 && cap.b <= auf.b + 1,
+				'open=' + aufklapper.open + ', Aufklapper ' + Math.round(zu.h) +
+				' → ' + Math.round(auf.h) + ' px, Beschriftung ' +
+				Math.round(cap.t) + '–' + Math.round(cap.b) + ' in ' +
+				Math.round(auf.t) + '–' + Math.round(auf.b));
+
+			/* Der Sinn der Sache: zugeklappt ist der Kasten kürzer. Ohne diese
+			 * Prüfung könnte der Aufklapper korrekt schalten, ohne Höhe zu
+			 * sparen — dann wäre er nur ein weiteres Bedienelement. */
+			check(tag + ' | zugeklappt ist der Kasten kürzer',
+				rect(karte).h >= kastenZu + 20,
+				'zugeklappt ' + Math.round(kastenZu) + ' px, offen ' +
+				Math.round(rect(karte).h) + ' px');
+			griff.click();
+		} else {
+			var offen = rect(aufklapper);
+			var capOffen = rect(beschriftung);
+			check(tag + ' | Nebenangaben stehen offen da',
+				aufklapper.open && capOffen.h > 0 &&
+				capOffen.t >= offen.t - 1 && capOffen.b <= offen.b + 1,
+				'open=' + aufklapper.open + ', Beschriftung ' +
+				Math.round(capOffen.t) + '–' + Math.round(capOffen.b) + ' in ' +
+				Math.round(offen.t) + '–' + Math.round(offen.b));
+			check(tag + ' | kein Aufklapp-Griff, wo Platz ist', !visible(griff));
 		}
 	}
 

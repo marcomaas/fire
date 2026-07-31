@@ -234,6 +234,7 @@ nav#nav a:hover {
 	 * daran, ob der Aufklapper offen ist — eine zweite 440 im Skript waere beim
 	 * naechsten Verschieben der Grenze still falsch geworden. */
 	--compact: 0;
+	--compact-row: 0;
 	position: absolute;
 	left: var(--gutter);
 	bottom: var(--gutter);
@@ -582,39 +583,52 @@ nav#nav a:hover {
 	pointer-events: none;
 }
 
-/* Die Abblende sitzt oberhalb der Hinweiszeile, nicht ueber ihr: 2 Pixel Abstand
- * zur Kante plus deren 16 Pixel (14 Zeilenhoehe + 2 Abstand). Die Hinweiszeile
- * erscheint genau dann, wenn eine der beiden Klassen gesetzt ist — die 16 Pixel
- * sind also nie reserviert, ohne belegt zu sein. */
 #map-fires.has-more::after,
 #map-compare.has-more::after {
-	bottom: 18px;
+	bottom: 2px;
 	background: linear-gradient(to top, var(--color-white), rgba(255, 255, 255, 0));
 }
 
 /* Nennt die Zahl der Eintraege ausserhalb des Fensters. Die Abblende allein sagt
  * nur, DASS es weitergeht — bei einer Liste, die um zwei Eintraege zu lang ist,
  * ist das der Unterschied zwischen "da fehlt noch was" und "da fehlen zwei".
- * Feste Hoehe, damit die Abblende sich darauf beziehen kann. */
+ *
+ * Ueber der Liste statt unter ihr, und zwar aus zwei Gruenden. Der erste ist
+ * Platz: als eigene Zeile nahm sie der Staedteliste 16 Pixel, und bei 470x470
+ * fiel die damit unter zwei Zeilen Hoehe — die Anzeige haette den Mangel
+ * verursacht, den sie anzeigt. Der zweite ist Stabilitaet: eine Zeile, die
+ * Hoehe kostet, verdeckt beim Erscheinen einen weiteren Eintrag und nennt danach
+ * eine Zahl, die nicht mehr stimmt (gemessen: "2 weitere" bei drei verdeckten).
+ * Sie liegt auf der Abblende, deren Zweck genau das Ausblenden des Inhalts unter
+ * ihr ist. */
 .list-hint {
 	display: none;
+	position: absolute;
+	right: 4px;
 	height: 14px;
-	margin-top: 2px;
 	font-size: 10px;
 	line-height: 14px;
 	font-weight: var(--font-weight-bold);
 	letter-spacing: 0.02em;
 	color: var(--color-blue);
 	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
+	pointer-events: none;
+	z-index: 2;
 }
 
+/* Geht es nach unten weiter, steht der Hinweis unten auf der dortigen Abblende.
+ * Nur nach oben — die Liste steht am Ende — steht er oben auf der oberen, sonst
+ * laege er ueber einem vollstaendig sichtbaren Eintrag. */
 #map-fires.has-more .list-hint,
-#map-fires.has-before .list-hint,
-#map-compare.has-more .list-hint,
-#map-compare.has-before .list-hint {
+#map-compare.has-more .list-hint {
 	display: block;
+	bottom: 3px;
+}
+
+#map-fires.has-before:not(.has-more) .list-hint,
+#map-compare.has-before:not(.has-more) .list-hint {
+	display: block;
+	top: 27px;
 }
 
 #map-fires.has-before::before,
@@ -929,9 +943,17 @@ html.in-frame #main {
 /* Unter dieser Hoehe teilen sich Auswahl- und Vergleichsblock so wenig Platz,
  * dass von fuenf Braenden einer sichtbar blieb. Gemessen bei 420x380 und
  * 500x400 — beides Groessen, die als Einbettung in einer Seitenspalte
- * tatsaechlich vorkommen. Die Grenze liegt bei 440 Pixeln, damit 460x460 noch
- * die Listen bekommt. */
-@media (max-height: 440px) {
+ * tatsaechlich vorkommen.
+ *
+ * Die Grenze lag zuerst bei 440 Pixeln. Bei 470x470 zeigte die Staedteliste dann
+ * ausschliesslich den Eintrag "ohne Vergleich" und keine einzige Stadt — das
+ * liest sich, als gaebe es nichts zu vergleichen, und ist schlechter als kein
+ * Kasten. Gemessen: Stapel 362 Pixel, davon 217 fuer die Braende, 135 fuer den
+ * Vergleich, dessen Liste damit 69 Pixel hoch war bei 220 Pixeln Inhalt.
+ *
+ * 500 Pixel ist die Hoehe, ab der beide Listen ihren Inhalt tatsaechlich zeigen.
+ * Der Regelfall der Einbettung (960x540) bleibt darueber. */
+@media (max-height: 500px) {
 	.panel-stack {
 		display: none;
 	}
@@ -955,12 +977,18 @@ html.in-frame #main {
 
 	/* Dieselbe Schwelle, dieselbe Begruendung, andere Stelle: der Kasten unten
 	 * links stapelte Flaechenzahl, Datum, Zeitstrahl und einen Absatz
-	 * Nebenangaben untereinander und war damit 150 Pixel hoch — bei 380 Pixel
+	 * Nebenangaben untereinander und war damit 144 Pixel hoch — bei 380 Pixel
 	 * Rahmenhoehe zwei Fuenftel des Bildes, ueber der Brandflaeche, um die es
-	 * geht. Kompakt heisst: Zahl und Datum teilen sich eine Zeile, der Zeitstrahl
-	 * liegt darunter, alles Weitere hinter dem Aufklapper. */
+	 * geht. Zahl und Datum teilen sich hier eine Zeile, der Zeitstrahl liegt
+	 * darunter.
+	 *
+	 * Diese Zeile setzt Breite voraus: die Flaechenangabe lautet ausgeschrieben
+	 * "12,34 km² (1.234 ha)". Neben einem Datum passt sie in die 264 bis 324
+	 * Pixel, die der Kasten in flachen Rahmen hat — nicht in die 204 eines 360
+	 * Pixel breiten Telefons. Deshalb haengt sie an der Hoehe, waehrend der
+	 * Aufklapper unten auch an der Breite haengt. */
 	#map-controls {
-		--compact: 1;
+		--compact-row: 1;
 		display: grid;
 		grid-template-columns: auto 1fr;
 		column-gap: 8px;
@@ -983,6 +1011,21 @@ html.in-frame #main {
 	#map-timeline,
 	#fire-details {
 		grid-column: 1 / -1;
+	}
+}
+
+/* Nebenangaben zugeklappt — in flachen UND in schmalen Rahmen. Die zweite
+ * Bedingung kommt aus einer Messung bei 360x640: dort war der Kasten 325 Pixel
+ * hoch, also die halbe Rahmenhoehe, und verdeckte 53 Prozent der Brandflaeche.
+ * Nicht weil viel drinstand, sondern weil in 204 Pixel Breite jeder Satz auf
+ * drei Zeilen umbricht. Ein Umbruch bleibt ein Umbruch, gleich wie hoch der
+ * Rahmen ist — deshalb greift hier die Breite und nicht die Hoehe.
+ *
+ * Zugeklappt heisst nicht weg: der Griff darueber ist sichtbar und beschriftet,
+ * und die Layout-Pruefung verlangt, dass er sich oeffnen laesst. */
+@media (max-height: 440px), (max-width: 460px) {
+	#map-controls {
+		--compact: 1;
 	}
 
 	#fire-details > summary {
