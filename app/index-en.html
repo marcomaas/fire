@@ -41,13 +41,19 @@
 			<div id="map"></div>
 
 			<div class="panel-stack">
+				<!-- Die Hinweiszeile nennt, wie viele Einträge außerhalb des Fensters
+				     liegen. Die Abblende allein zeigt nur, DASS es weitergeht, nicht wie
+				     weit — bei fünf Einträgen ist das der Unterschied zwischen „da fehlt
+				     noch was" und „da fehlen zwei". Text setzt fire.js. -->
 				<div id="map-fires">
 					<h2>Select fire</h2>
 					<ul></ul>
+					<p class="list-hint" aria-live="polite"></p>
 				</div>
 				<div id="map-compare">
 					<h2>Size comparison</h2>
 					<ul></ul>
+					<p class="list-hint" aria-live="polite"></p>
 				</div>
 			</div>
 

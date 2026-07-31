@@ -63,6 +63,7 @@ function zustand(doc, win) {
 			: null,
 		anzahl: (doc.getElementById('info-count') || {}).textContent || '',
 		datum: (doc.getElementById('map-date') || {}).textContent || '',
+		daten: win._fires || null,
 		adresse: win.location.search + win.location.hash,
 		vollLink: (function () {
 			var a = doc.querySelector('.leaflet-control-attribution a[href*="apps.datenfreunde.com"]');
@@ -91,6 +92,16 @@ function lade(url, cb) {
 		}, 900);
 	};
 	document.getElementById('frames').appendChild(f);
+}
+
+/* Wartet, bis eine Bedingung im Rahmen zutrifft. Nötig für alles, was von der
+ * abgespielten Zeitleiste abhängt: die Anwendung startet die Animation selbst,
+ * und eine feste Wartezeit trifft dann einen zufälligen Zwischenstand. */
+function warteAuf(doc, bedingung, cb, versuche) {
+	versuche = versuche === undefined ? 120 : versuche;
+	if (bedingung()) { cb(true); return; }
+	if (versuche <= 0) { cb(false); return; }
+	setTimeout(function () { warteAuf(doc, bedingung, cb, versuche - 1); }, 100);
 }
 
 var ALLE = ['gironde', 'central-spain', 'biscarrosse', 'artana', 'fontainebleau'];
@@ -250,18 +261,67 @@ var FAELLE = [
 		}
 	},
 	{
-		name: 'Zeitangabe traegt das Kuerzel der Ortszeit',
+		name: 'Zeitangabe in der Ortszeit des Brandes',
 		url: '../app/index-de.html#artana',
-		pruefe: function (z) {
-			/* Der Versatz stand als feste 2 im Code — richtig für die Sommeraufnahmen,
-			 * aber jede Aufnahme aus dem Winterhalbjahr stünde eine Stunde falsch da.
-			 * Gerechnet wird jetzt je Zeitpunkt aus der Zone des Brandes. Geprüft wird
-			 * das Ergebnis: die Anzeige nennt eine Zeit und das passende Kürzel. */
-			check('Zeitangabe | nennt Datum, Uhrzeit und Kürzel',
-				/\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}\s+(MEZ|MESZ)$/.test(z.datum.trim()),
-				'Anzeige "' + z.datum + '"');
-			check('Zeitangabe | Sommeraufnahme trägt MESZ',
-				z.datum.indexOf('MESZ') !== -1, 'Anzeige "' + z.datum + '"');
+		/* Eigenes Laden: geprüft wird der Stand NACH der Animation, nicht ein
+		 * Zwischenstand. Die Anwendung spielt beim Öffnen selbst ab, eine feste
+		 * Wartezeit träfe deshalb eine interpolierte Zeit — und gegen die lässt sich
+		 * nichts vergleichen. */
+		eigenesLaden: function (fertig) {
+			var f = document.createElement('iframe');
+			f.width = 900;
+			f.height = 600;
+			f.src = '../app/index-de.html#artana';
+			f.onload = function () {
+				var doc = f.contentDocument, win = f.contentWindow;
+				warteAuf(doc, function () {
+					return doc.getElementById('map-container') &&
+						doc.getElementById('map-container').classList.contains('played');
+				}, function (durch) {
+					var datum = (doc.getElementById('map-date') || {}).textContent || '';
+					var daten = win._fires || [];
+					f.remove();
+
+					check('Zeitangabe | Animation läuft durch', durch,
+						'Animation nicht fertig — Anzeige "' + datum + '"');
+					if (!durch) { fertig(); return; }
+
+					check('Zeitangabe | nennt Datum, Uhrzeit und Kürzel',
+						/\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}\s+(MEZ|MESZ)$/.test(datum.trim()),
+						'Anzeige "' + datum + '"');
+
+					var brand = daten.filter(function (x) { return x.slug === 'artana'; })[0];
+					check('Zeitangabe | Rohdaten des Brandes vorhanden', !!brand);
+					if (!brand) { fertig(); return; }
+
+					/* Nach der Animation steht der letzte Zeitschnitt. Die Erwartung
+					 * entsteht über Intl aus den Rohdaten — ein zweiter Rechenweg, nicht
+					 * derselbe noch einmal. Eine reine Formprüfung besteht auch bei
+					 * falschem Versatz; der Mutationslauf hat genau das gezeigt. */
+					var letzter = brand.steps[brand.steps.length - 1];
+					var ms = Date.parse(letzter.acquired + 'Z');
+					var erwartet = new Intl.DateTimeFormat('de-DE', {
+						timeZone: brand.timezone,
+						day: '2-digit', month: '2-digit', year: 'numeric',
+						hour: '2-digit', minute: '2-digit'
+					}).format(ms);
+					var ziffern = function (t) { return t.replace(/\D/g, ''); };
+
+					check('Zeitangabe | stimmt mit der Ortszeit der Aufnahme überein',
+						ziffern(datum) === ziffern(erwartet),
+						'angezeigt "' + datum.trim() + '", erwartet "' + erwartet +
+						'" (' + brand.timezone + ')');
+
+					var versatz = Math.round(
+						(new Date(new Date(ms).toLocaleString('en-US', { timeZone: brand.timezone })) -
+						 new Date(new Date(ms).toLocaleString('en-US', { timeZone: 'UTC' }))) / 3600000);
+					check('Zeitangabe | Kürzel passt zum Versatz',
+						datum.indexOf(versatz === 1 ? 'MEZ' : 'MESZ') !== -1,
+						'Versatz ' + versatz + ' h, Anzeige "' + datum.trim() + '"');
+					fertig();
+				});
+			};
+			document.getElementById('frames').appendChild(f);
 		}
 	},
 	{
@@ -283,6 +343,10 @@ var FAELLE = [
 		return;
 	}
 	var fall = FAELLE[i];
+	if (fall.eigenesLaden) {
+		fall.eigenesLaden(function () { next(i + 1); });
+		return;
+	}
 	lade(fall.url, function (z) {
 		if (z.fehler) {
 			check(fall.name + ' | Fassung geladen', false, z.fehler);

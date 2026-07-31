@@ -32,7 +32,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PORT = 8792  # bewusst neben run_layout_tests.py (8791), damit beide nebeneinander laufen
 SUITE = "tests/routing.test.html"
-BUDGET = 30000
+BUDGET = 45000
 
 # Was aus dem Baum in die Kopie muss. data/ und bin/ bleiben draussen — die
 # Testseite laedt nur app/ und tests/.
@@ -129,7 +129,7 @@ MUTATIONEN = [
         JS,
         "    var stunden = offsetHours(millis, zoneOf(fire));",
         "    var stunden = 5;",
-        "Zeitangabe | Sommeraufnahme traegt MESZ",
+        "Zeitangabe | stimmt mit der Ortszeit der Aufnahme ueberein",
     ),
     Mutation(
         "Kuerzel passt nicht zum Versatz",

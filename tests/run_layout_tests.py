@@ -34,7 +34,7 @@ PORT = 8791
 # mehr Rahmen, aber ohne auf die Kartenkacheln zu warten.
 SUITES = [
     ("tests/layout.test.html", 8000),
-    ("tests/routing.test.html", 20000),
+    ("tests/routing.test.html", 40000),
 ]
 
 # Chrome an den Orten, an denen er auf einem Mac und auf einem CI-Laeufer liegt.
