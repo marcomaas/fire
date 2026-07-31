@@ -83,15 +83,29 @@
 						<span id="timeline-from"></span>
 						<span id="timeline-to"></span>
 					</div>
-					<div id="timeline-summary"></div>
 				</div>
 
-				<div id="fire-caption">
-					<span id="fire-region"></span>
-					<span id="fire-status"></span>
-					<span><span id="fire-steps"></span> · Copernicus <a id="fire-source" href="#" target="_blank" rel="noopener"></a></span>
-					<span id="fire-note"></span>
-				</div>
+				<!-- Nebenangaben hinter einem Aufklapper. In flachen Rahmen ist die Höhe
+				     das knappe Gut: zugeklappt gibt der Kasten die Fläche zurück, um die
+				     es in dieser Anwendung geht. Offen ist der Standard — welchen Zustand
+				     die Rahmenhöhe verlangt, entscheidet das Stylesheet über --compact,
+				     fire.js liest es dort ab. Beschriftung ebenfalls aus fire.js, damit
+				     hier keine Sprache festgeschrieben ist.
+
+				     Die Zeitstrahl-Zusammenfassung steht mit darin: sie ist ein ganzer
+				     Satz und damit der breiteste Teil des Kastens. Der Zeitstrahl selbst
+				     bleibt sichtbar, er ist die Aussage. -->
+				<details id="fire-details" open>
+					<summary id="fire-details-label"></summary>
+					<div id="timeline-summary"></div>
+
+					<div id="fire-caption">
+						<span id="fire-region"></span>
+						<span id="fire-status"></span>
+						<span><span id="fire-steps"></span> · Copernicus <a id="fire-source" href="#" target="_blank" rel="noopener"></a></span>
+						<span id="fire-note"></span>
+					</div>
+				</details>
 			</div>
 
 			<a id="map-startstop" href="javascript:;" title="Play the sequence"><span class="glyph"></span><span id="map-startstop-label">Play</span></a>

@@ -67,7 +67,12 @@ $(document).ready(function () {
 
     var m = /[?&]nur=([^&]*)/.exec(window.location.search);
     if (m) roh = decodeURIComponent(m[1].replace(/\+/g, " "));
-    else if (typeof _config !== "undefined" && _config && _config.nur && _config.nur.length)
+    else if (
+      typeof _config !== "undefined" &&
+      _config &&
+      _config.nur &&
+      _config.nur.length
+    )
       roh = _config.nur.join(",");
 
     if (!roh) return null;
@@ -178,6 +183,19 @@ $(document).ready(function () {
       rangeJoin: " bis ",
       noCompare: "ohne Vergleich",
       nearest: "am nächsten zum Brandort",
+      details: "Angaben zum Brand",
+      /* Nennt die Eintraege ausserhalb des Fensters mit ihrer Richtung. Nur eine
+       * Zahl ohne Richtung liesse offen, wohin gescrollt werden muss — und in
+       * einer Liste, die schon in der Mitte steht, geht es in beide. */
+      hiddenBelow: function (n) {
+        return n + " weitere ↓";
+      },
+      hiddenAbove: function (n) {
+        return "↑ " + n + " weitere";
+      },
+      hiddenBoth: function (oben, unten) {
+        return "↑ " + oben + " · " + unten + " ↓";
+      },
     },
     en: {
       dateFormat: "YYYY-MM-DD HH:mm",
@@ -229,6 +247,16 @@ $(document).ready(function () {
       rangeJoin: " to ",
       noCompare: "no comparison",
       nearest: "closest to the fire",
+      details: "Fire details",
+      hiddenBelow: function (n) {
+        return n + " more ↓";
+      },
+      hiddenAbove: function (n) {
+        return "↑ " + n + " more";
+      },
+      hiddenBoth: function (oben, unten) {
+        return "↑ " + oben + " · " + unten + " ↓";
+      },
     },
   }[lang];
 
@@ -531,7 +559,7 @@ $(document).ready(function () {
       keyboard: false,
       icon: L.divIcon({
         className: "city-label",
-        html: '<span></span>',
+        html: "<span></span>",
         iconSize: null,
       }),
     }).addTo(map);
@@ -961,16 +989,69 @@ $(document).ready(function () {
   /* Zeigt an, dass eine Liste weitergeht. Gelesen wird der tatsaechliche
    * Scrollzustand, nicht die Anzahl der Eintraege — eine Liste kann bei einer
    * Rahmenhoehe vollstaendig passen und bei der naechsten nicht. Deshalb auch
-   * beim Groessenwechsel neu bestimmt. */
+   * beim Groessenwechsel neu bestimmt.
+   *
+   * Gezaehlt wird ueber die Eintraege selbst, nicht ueber die Restpixel des
+   * Scrollbereichs: nur so laesst sich die Zahl nennen, und nur so deckt sich die
+   * Anzeige mit dem, was ein Leser sieht. Die Pixelrechnung schwieg bei einem um
+   * einen Pixel angeschnittenen Eintrag — sichtbar unvollstaendig, laut Anzeige
+   * vollstaendig. */
+  function hiddenEntries(ul) {
+    var fenster = ul.getBoundingClientRect();
+    var oben = 0;
+    var unten = 0;
+    Array.prototype.forEach.call(ul.children, function (li) {
+      var r = li.getBoundingClientRect();
+      if (r.bottom < fenster.top + 1) oben++;
+      else if (r.top < fenster.top - 1) oben++;
+      else if (r.bottom > fenster.bottom + 1) unten++;
+    });
+    return { oben: oben, unten: unten };
+  }
+
   function updateScrollHints() {
     ["#map-fires", "#map-compare"].forEach(function (sel) {
       var box = $(sel);
       var ul = box.find("ul")[0];
       if (!ul) return;
-      var rest = ul.scrollHeight - ul.clientHeight - ul.scrollTop;
-      box.toggleClass("has-more", rest > 2);
-      box.toggleClass("has-before", ul.scrollTop > 2);
+      var verdeckt = hiddenEntries(ul);
+      box.toggleClass("has-more", verdeckt.unten > 0);
+      box.toggleClass("has-before", verdeckt.oben > 0);
+
+      var hinweis = "";
+      if (verdeckt.oben && verdeckt.unten) {
+        hinweis = text.hiddenBoth(verdeckt.oben, verdeckt.unten);
+      } else if (verdeckt.unten) {
+        hinweis = text.hiddenBelow(verdeckt.unten);
+      } else if (verdeckt.oben) {
+        hinweis = text.hiddenAbove(verdeckt.oben);
+      }
+      box.find(".list-hint").text(hinweis);
     });
+  }
+
+  /* ---------- Kompakte Zustandsanzeige ---------- */
+
+  /* Die Schwelle steht im Stylesheet, nicht hier: dort liegt schon die Regel, die
+   * das Umschalten der Auswahl entscheidet, und zwei Zahlen an zwei Stellen waeren
+   * beim naechsten Verschieben still auseinandergelaufen. Gelesen wird die Wirkung
+   * (--compact), nicht die Bedingung. */
+  function cardIsCompact() {
+    var el = document.getElementById("map-controls");
+    if (!el) return false;
+    return getComputedStyle(el).getPropertyValue("--compact").trim() === "1";
+  }
+
+  /* Nur beim Wechsel gesetzt, nicht bei jedem Ereignis: hat jemand die Angaben in
+   * der kompakten Fassung von Hand aufgeklappt, soll ein Groessenwechsel innerhalb
+   * derselben Fassung sie nicht wieder zuklappen. */
+  var lastCardMode = null;
+
+  function applyCardMode() {
+    var compact = cardIsCompact();
+    if (compact === lastCardMode) return;
+    lastCardMode = compact;
+    $("#fire-details").prop("open", !compact);
   }
 
   $(document).on("scroll", "#map-fires ul, #map-compare ul", updateScrollHints);
@@ -1134,7 +1215,10 @@ $(document).ready(function () {
      * Fassung ist sie von der Redaktion festgelegt, in der vollen Anwendung soll
      * sie der Leser selbst bestimmen koennen. Mit ?nur= im Verweis waere sie dort
      * genauso eingeschraenkt. */
-    var ziel = FULL_APP_URL + (lang === "de" ? "" : "index-en.html") + window.location.hash;
+    var ziel =
+      FULL_APP_URL +
+      (lang === "de" ? "" : "index-en.html") +
+      window.location.hash;
 
     /* Ueber addAttribution, nicht per append in das Element: Leaflet baut die
      * Herkunftszeile bei jeder hinzugefuegten Ebene neu auf. Ein angehaengter
@@ -1142,7 +1226,11 @@ $(document).ready(function () {
      * — sichtbar war er nur in dem Augenblick zwischen Aufbau und erster
      * Auswahl, also nie. */
     map.attributionControl.addAttribution(
-      '<a href="' + ziel + '" target="_blank" rel="noopener">' + text.fullApp + "</a>",
+      '<a href="' +
+        ziel +
+        '" target="_blank" rel="noopener">' +
+        text.fullApp +
+        "</a>",
     );
   }
 

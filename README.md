@@ -45,6 +45,12 @@ bin/build_cities.py      baut die Stadtumrisse
 data/*.geojson           Stadtgrenzen in echten Koordinaten (Quelldaten)
 ```
 
+Unter `data/` liegen mehr Stadtgrenzen als die Anwendung zeigt: `hamburg`, `koeln`,
+`muenchen` und `manhattan` sind aus der Vergleichsliste genommen worden, `sacramento`
+stammt aus der Yosemite-Fassung von 2013. Die Dateien bleiben liegen, damit eine
+Stadt ohne neuen Abruf bei OpenStreetMap zurückkommen kann — welche Städte
+erscheinen, entscheidet allein die Liste in `bin/build_cities.py`.
+
 `polymorph.js` ist absichtlich unangetastet, damit ein Vergleich mit der Fassung von
 2013 möglich bleibt — die LICENSE-Datei sagt das auch so. Darin steckt eine Funktion
 `linterpol`, die dort schon niemand aufrief; sie bleibt aus demselben Grund stehen.

@@ -228,6 +228,12 @@ nav#nav a:hover {
 /* ---------- Zustandsanzeige unten links ---------- */
 
 #map-controls {
+	/* Schaltet die kompakte Fassung ein (siehe die Regel bei 440 Pixel Hoehe).
+	 * Bewusst eine CSS-Eigenschaft und keine Zahl in fire.js: die Schwelle steht
+	 * damit an genau einer Stelle. fire.js liest sie hier ab und entscheidet
+	 * daran, ob der Aufklapper offen ist — eine zweite 440 im Skript waere beim
+	 * naechsten Verschieben der Grenze still falsch geworden. */
+	--compact: 0;
 	position: absolute;
 	left: var(--gutter);
 	bottom: var(--gutter);
@@ -266,6 +272,38 @@ nav#nav a:hover {
 	border-top: 1px solid var(--color-grey);
 	font-size: 12px;
 	color: var(--color-blue);
+}
+
+/* Der Aufklapper ueber den Nebenangaben ist im Regelfall unsichtbar und offen:
+ * dort ist Hoehe kein knappes Gut, und ein Griff, der nichts zu verbergen hat,
+ * waere nur ein weiteres Bedienelement. Sichtbar wird er in der kompakten
+ * Fassung — dort ist er der Nachweis, dass nichts verschwunden ist. */
+#fire-details > summary {
+	display: none;
+	cursor: pointer;
+	list-style: none;
+	font-size: 11px;
+	font-weight: var(--font-weight-bold);
+	color: var(--color-blue);
+}
+
+/* Eigene Marke statt der Dreiecksmarke des Browsers: die faellt je Browser
+ * anders aus und laesst sich nicht einfaerben. */
+#fire-details > summary::-webkit-details-marker {
+	display: none;
+}
+
+#fire-details > summary::after {
+	content: " ▾";
+}
+
+#fire-details:not([open]) > summary::after {
+	content: " ▸";
+}
+
+#fire-details > summary:focus-visible {
+	outline: 2px solid var(--color-yellow);
+	outline-offset: 1px;
 }
 
 #fire-region {
@@ -544,10 +582,39 @@ nav#nav a:hover {
 	pointer-events: none;
 }
 
+/* Die Abblende sitzt oberhalb der Hinweiszeile, nicht ueber ihr: 2 Pixel Abstand
+ * zur Kante plus deren 16 Pixel (14 Zeilenhoehe + 2 Abstand). Die Hinweiszeile
+ * erscheint genau dann, wenn eine der beiden Klassen gesetzt ist — die 16 Pixel
+ * sind also nie reserviert, ohne belegt zu sein. */
 #map-fires.has-more::after,
 #map-compare.has-more::after {
-	bottom: 2px;
+	bottom: 18px;
 	background: linear-gradient(to top, var(--color-white), rgba(255, 255, 255, 0));
+}
+
+/* Nennt die Zahl der Eintraege ausserhalb des Fensters. Die Abblende allein sagt
+ * nur, DASS es weitergeht — bei einer Liste, die um zwei Eintraege zu lang ist,
+ * ist das der Unterschied zwischen "da fehlt noch was" und "da fehlen zwei".
+ * Feste Hoehe, damit die Abblende sich darauf beziehen kann. */
+.list-hint {
+	display: none;
+	height: 14px;
+	margin-top: 2px;
+	font-size: 10px;
+	line-height: 14px;
+	font-weight: var(--font-weight-bold);
+	letter-spacing: 0.02em;
+	color: var(--color-blue);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+#map-fires.has-more .list-hint,
+#map-fires.has-before .list-hint,
+#map-compare.has-more .list-hint,
+#map-compare.has-before .list-hint {
+	display: block;
 }
 
 #map-fires.has-before::before,
@@ -884,6 +951,43 @@ html.in-frame #main {
 	#map-picker label {
 		flex: 1 1 0;
 		min-width: 0;
+	}
+
+	/* Dieselbe Schwelle, dieselbe Begruendung, andere Stelle: der Kasten unten
+	 * links stapelte Flaechenzahl, Datum, Zeitstrahl und einen Absatz
+	 * Nebenangaben untereinander und war damit 150 Pixel hoch — bei 380 Pixel
+	 * Rahmenhoehe zwei Fuenftel des Bildes, ueber der Brandflaeche, um die es
+	 * geht. Kompakt heisst: Zahl und Datum teilen sich eine Zeile, der Zeitstrahl
+	 * liegt darunter, alles Weitere hinter dem Aufklapper. */
+	#map-controls {
+		--compact: 1;
+		display: grid;
+		grid-template-columns: auto 1fr;
+		column-gap: 8px;
+		padding: 7px 10px 8px;
+	}
+
+	#map-size {
+		font-size: 19px;
+	}
+
+	/* An der Grundlinie der Flaechenzahl ausgerichtet, nicht an ihrer Oberkante:
+	 * die Zahl ist fast doppelt so gross, oben ausgerichtet haette das Datum in
+	 * der Luft gehangen. */
+	#map-date {
+		margin-top: 0;
+		align-self: end;
+		padding-bottom: 3px;
+	}
+
+	#map-timeline,
+	#fire-details {
+		grid-column: 1 / -1;
+	}
+
+	#fire-details > summary {
+		display: block;
+		margin-top: 5px;
 	}
 }
 
