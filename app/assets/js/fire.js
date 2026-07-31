@@ -72,6 +72,10 @@ $(document).ready(function () {
    * einzige Stelle ist, die auch im eingebetteten Zustand sichtbar bleibt. */
   var IMPRINT_URL = "https://www.datenfreunde.com/impressum";
 
+  /* Die vollstaendige Anwendung. Im Rahmen zeigt ein Verweis dorthin, damit ein
+   * Leser die Auswahl selbst steuern kann. */
+  var FULL_APP_URL = "https://apps.datenfreunde.com/";
+
   /* Abspieldauer je Abschnitt richtet sich nach dem tatsächlichen Zeitabstand
    * zweier Aufnahmen — vorher war jeder Abschnitt gleich lang, ob 22 oder 49
    * Stunden dazwischen lagen. Gedeckelt nach oben und unten, damit ein sehr
@@ -113,6 +117,7 @@ $(document).ready(function () {
       again: "Nochmal",
       sources: "Quellen",
       imprint: "Impressum",
+      fullApp: "alle Brände",
       outbreak: "Brandausbruch",
       acquisition: "Satellitenaufnahme",
       dayShort: "DD.MM.",
@@ -166,6 +171,7 @@ $(document).ready(function () {
       again: "Replay",
       sources: "Sources",
       imprint: "Impressum",
+      fullApp: "all fires",
       outbreak: "Fire outbreak",
       acquisition: "Satellite acquisition",
       dayShort: "MMM D",
@@ -1088,7 +1094,22 @@ $(document).ready(function () {
   fillInfoFigures();
   updateScrollHints();
 
-  if (window.top !== window) $("html").addClass("in-frame");
+  if (window.top !== window) {
+    $("html").addClass("in-frame");
+
+    /* Verweis auf die vollstaendige Anwendung. Er gehoert in die Herkunftszeile,
+     * weil das die einzige Stelle ist, die im Rahmen sichtbar bleibt — die
+     * Kopfzeile wird dort ausgeblendet.
+     *
+     * Der Anker wird mitgenommen, die Auswahl bewusst nicht: in der eingebetteten
+     * Fassung ist sie von der Redaktion festgelegt, in der vollen Anwendung soll
+     * sie der Leser selbst bestimmen koennen. Mit ?nur= im Verweis waere sie dort
+     * genauso eingeschraenkt. */
+    var ziel = FULL_APP_URL + (lang === "de" ? "" : "index-en.html") + window.location.hash;
+    $(".leaflet-control-attribution").append(
+      ' · <a href="' + ziel + '" target="_blank" rel="noopener">' + text.fullApp + "</a>",
+    );
+  }
 
   /* Anker der Form #brand oder #brand/stadt */
   function parseHash() {

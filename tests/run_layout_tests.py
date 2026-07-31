@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""Fuehrt die Layout-Regressionstests in einem echten Browser aus.
+"""Fuehrt die Browser-Regressionstests aus.
 
-Startet einen lokalen Webserver, laedt tests/layout.test.html in Chrome ohne
+Startet einen lokalen Webserver, laedt die Testseiten unter tests/ in Chrome ohne
 Fenster und liest das Ergebnis aus dem fertig gerenderten Dokument. Beendet sich
 mit Code 1, sobald eine Pruefung fehlschlaegt.
+
+Zwei Testseiten:
+  layout.test.html   — Geometrie und Bedienbarkeit in Rahmen mehrerer Groessen
+  routing.test.html  — Adresse und Auswahl: Anker, ?nur=, Rueckfaelle
 
 Bewusst ohne Playwright oder Selenium: die Pruefungen brauchen nur echtes Layout
 und ein paar Klicks, das leistet Chrome mit --dump-dom und --virtual-time-budget
@@ -24,6 +28,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PORT = 8791
+
+# Testseiten mit dem Zeitbudget, das sie brauchen. Die Layout-Seite baut zehn
+# Rahmen auf und wartet, bis Karten und Schriften stehen; die Routing-Seite laedt
+# mehr Rahmen, aber ohne auf die Kartenkacheln zu warten.
+SUITES = [
+    ("tests/layout.test.html", 8000),
+    ("tests/routing.test.html", 12000),
+]
 
 # Chrome an den Orten, an denen er auf einem Mac und auf einem CI-Laeufer liegt.
 CHROME_CANDIDATES = [
@@ -62,65 +74,84 @@ def serve():
     return server
 
 
-def main():
-    chrome = find_chrome()
-    if not chrome:
-        print("Chrome nicht gefunden - Layout-Tests uebersprungen.", file=sys.stderr)
-        print("Gesucht an:", ", ".join(CHROME_CANDIDATES), file=sys.stderr)
-        return 0  # Kein Browser ist kein Testfehler.
+def run_suite(chrome, path, budget):
+    """Fuehrt eine Testseite aus und gibt (Fehlerzeilen, Zusammenfassung) zurueck.
 
-    server = serve()
-    try:
-        url = f"http://127.0.0.1:{PORT}/tests/layout.test.html"
-        result = subprocess.run(
-            [
-                chrome,
-                "--headless=new",
-                "--disable-gpu",
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                # Die Testseite wartet sechs Sekunden, bevor sie messt. Das
-                # Budget endet knapp danach: unter virtueller Zeit rechnen die
-                # Animationen in zehn Rahmen sonst weiter, ohne dass das Ergebnis
-                # sich noch ändert — das kostete real über drei Minuten.
-                "--virtual-time-budget=8000",
-                "--dump-dom",
-                url,
-            ],
-            capture_output=True,
-            text=True,
-            timeout=300,
-        )
-    finally:
-        server.shutdown()
+    Bei einem Abbruch ist die Zusammenfassung None — der Aufrufer wertet das als
+    Fehlschlag, nicht als "keine Fehler gefunden".
+    """
+    url = f"http://127.0.0.1:{PORT}/{path}"
+    result = subprocess.run(
+        [
+            chrome,
+            "--headless=new",
+            "--disable-gpu",
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+            # Die Testseiten warten, bevor sie messen. Das Budget endet knapp
+            # danach: unter virtueller Zeit rechnen die Animationen in zehn
+            # Rahmen sonst weiter, ohne dass das Ergebnis sich noch aendert —
+            # das kostete real ueber drei Minuten.
+            f"--virtual-time-budget={budget}",
+            "--dump-dom",
+            url,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
 
     dom = result.stdout
     if not dom.strip():
-        print("Chrome lieferte kein Dokument.", file=sys.stderr)
+        print(f"{path}: Chrome lieferte kein Dokument.", file=sys.stderr)
         print(result.stderr[-2000:], file=sys.stderr)
-        return 1
+        return [], None
 
     match = re.search(r'<pre id="results">(.*?)</pre>', dom, re.S)
     if not match:
-        print("Ergebnisblock nicht gefunden - lief das Skript der Testseite?", file=sys.stderr)
-        return 1
+        print(f"{path}: Ergebnisblock nicht gefunden - lief das Skript?", file=sys.stderr)
+        return [], None
 
     report = html.unescape(match.group(1)).strip()
     lines = [line.strip() for line in report.splitlines() if line.strip()]
 
     if not any(line.startswith("DONE") for line in lines):
-        print("Testlauf unvollstaendig - kein DONE. Zeitbudget zu klein?", file=sys.stderr)
+        print(f"{path}: Testlauf unvollstaendig - kein DONE. Zeitbudget zu klein?",
+              file=sys.stderr)
         print(report[-2000:], file=sys.stderr)
-        return 1
+        return [], None
 
     failures = [line for line in lines if line.startswith("FAIL")]
     summary = next(line for line in lines if line.startswith("DONE"))
+    return failures, summary
 
-    for line in failures:
-        print(line)
-    print(summary)
 
-    return 1 if failures else 0
+def main():
+    chrome = find_chrome()
+    if not chrome:
+        print("Chrome nicht gefunden - Browser-Tests uebersprungen.", file=sys.stderr)
+        print("Gesucht an:", ", ".join(CHROME_CANDIDATES), file=sys.stderr)
+        return 0  # Kein Browser ist kein Testfehler.
+
+    server = serve()
+    schlecht = False
+    try:
+        for path, budget in SUITES:
+            if not (ROOT / path).exists():
+                print(f"{path}: Testseite fehlt.", file=sys.stderr)
+                schlecht = True
+                continue
+            failures, summary = run_suite(chrome, path, budget)
+            for line in failures:
+                print(line)
+            name = Path(path).name
+            print(f"{name}: {summary}" if summary else f"{name}: ABGEBROCHEN")
+            if failures or not summary:
+                schlecht = True
+    finally:
+        server.shutdown()
+
+    return 1 if schlecht else 0
 
 
 if __name__ == "__main__":
