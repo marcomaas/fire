@@ -525,16 +525,63 @@ function testFrame(page, vp, win, doc) {
 	 *     Ohne Beschriftung sagt der Umriss nicht, welche Stadt er zeigt: in der
 	 *     kompakten Darstellung steht die Antwort im zugeklappten Auswahlfeld,
 	 *     und in einem weitergegebenen Bildschirmfoto nirgends. */
-	var stadtLink = doc.querySelector('#map-compare a[data-city]:not([data-city=""])');
+
+	/* Zuerst der Zustand beim Laden — ohne Zutun. Der Größenvergleich ist die
+	 * Aussage dieser Anwendung; stand er im Standard aus, war sie in jeder
+	 * Einbettung unsichtbar, die keinen Anker mit Stadt trägt. Geprüft wird gegen
+	 * das Feld compare in den Daten, nicht gegen einen im Test wiederholten
+	 * Namen: sonst prüfte der Test seine eigene Erwartung. */
+	var aktiverBrand = (doc.querySelector('#map-fires a.highlight') || {}).getAttribute
+		? doc.querySelector('#map-fires a.highlight').getAttribute('data-fire')
+		: null;
+	var brandDaten = (win._fires || []).filter(function (f) { return f.slug === aktiverBrand; })[0];
+	var stadtDaten = brandDaten
+		? (win._cities || []).filter(function (c) { return c.slug === brandDaten.compare; })[0]
+		: null;
+	check(tag + ' | Brand nennt eine voreingestellte Vergleichsstadt',
+		!!stadtDaten, 'Brand ' + aktiverBrand + ', compare ' +
+		(brandDaten ? brandDaten.compare : '—'));
+	if (stadtDaten) {
+		var start = doc.querySelector('.city-label span');
+		var erwartet = stadtDaten.label[page.indexOf('-en') !== -1 ? 'en' : 'de'] || stadtDaten.label.de;
+		check(tag + ' | Vergleich ist beim Laden eingeblendet',
+			!!start && start.textContent.trim() === erwartet,
+			start ? 'Marke "' + start.textContent + '" statt "' + erwartet + '"' : 'keine Marke');
+		check(tag + ' | voreingestellter Eintrag ist hervorgehoben',
+			(doc.querySelector('#map-compare a.highlight') || {}).getAttribute &&
+			doc.querySelector('#map-compare a.highlight').getAttribute('data-city') === stadtDaten.slug,
+			'hervorgehoben: ' + ((doc.querySelector('#map-compare a.highlight') || {}).getAttribute
+				? doc.querySelector('#map-compare a.highlight').getAttribute('data-city') : 'keiner'));
+	}
+
+	/* Dann ein Wechsel auf eine ANDERE Stadt. Der erste Eintrag der Liste taugt
+	 * dafür nicht mehr: ist er der voreingestellte, hebt ein Klick den Vergleich
+	 * auf, statt ihn zu setzen — genau das hat diese Prüfung gemeldet, als die
+	 * Voreinstellung dazukam. */
+	var aktivJetzt = (doc.querySelector('#map-compare a.highlight') || {}).getAttribute
+		? doc.querySelector('#map-compare a.highlight').getAttribute('data-city')
+		: '';
 	var stadtFeldEl = doc.getElementById('pick-city');
 	var stadtName = '';
 	if (felderAn && stadtFeldEl && stadtFeldEl.options.length > 1) {
-		stadtFeldEl.value = stadtFeldEl.options[1].value;
-		stadtName = stadtFeldEl.options[1].textContent;
-		stadtFeldEl.dispatchEvent(new win.Event('change', { bubbles: true }));
-	} else if (stadtLink) {
-		stadtName = stadtLink.textContent;
-		stadtLink.click();
+		var andere = null;
+		for (var oi = 1; oi < stadtFeldEl.options.length; oi++) {
+			if (stadtFeldEl.options[oi].value !== aktivJetzt) { andere = stadtFeldEl.options[oi]; break; }
+		}
+		if (andere) {
+			stadtFeldEl.value = andere.value;
+			stadtName = andere.textContent;
+			stadtFeldEl.dispatchEvent(new win.Event('change', { bubbles: true }));
+		}
+	} else {
+		var links = doc.querySelectorAll('#map-compare a[data-city]:not([data-city=""])');
+		for (var li = 0; li < links.length; li++) {
+			if (links[li].getAttribute('data-city') !== aktivJetzt) {
+				stadtName = links[li].textContent;
+				links[li].click();
+				break;
+			}
+		}
 	}
 
 	check(tag + ' | Städtevergleich auswählbar', stadtName.length > 0);

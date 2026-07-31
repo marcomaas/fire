@@ -570,20 +570,25 @@ $(document).ready(function () {
      * Eintrag hervorgehoben, im eingebetteten Zustand mit Auswahlfeldern steht
      * die Antwort nur im zugeklappten Feld — und wer die Grafik als Bild
      * weitergibt, hat gar keine Beschriftung. Die Marke sitzt an der Nordkante
-     * des Umrisses und traegt denselben Namen wie der Listeneintrag. */
+     * des Umrisses und traegt denselben Namen wie der Listeneintrag.
+     *
+     * Der Name steht im Icon selbst und wird nicht nachtraeglich in das erzeugte
+     * Element geschrieben: getElement() liefert null, solange die Karte keine
+     * Groesse hat — in einem Rahmen, der erst nach dem Laden bemasst wird, brach
+     * showCity an dieser Zeile ab und der Vergleich blieb ganz aus. */
     var nord = cityLayer.getBounds().getNorth();
     var mitte = cityLayer.getBounds().getCenter().lng;
+    var beschriftung = document.createElement("span");
+    beschriftung.textContent = city.label[lang] || city.label.de;
     cityLabel = L.marker([nord, mitte], {
       interactive: false,
       keyboard: false,
       icon: L.divIcon({
         className: "city-label",
-        html: "<span></span>",
+        html: beschriftung.outerHTML,
         iconSize: null,
       }),
     }).addTo(map);
-    cityLabel.getElement().querySelector("span").textContent =
-      city.label[lang] || city.label.de;
     activeCity = slug;
     syncPickers();
     $("#map-compare a").removeClass("highlight");
@@ -599,8 +604,30 @@ $(document).ready(function () {
      * auszuwählen ist eine ausdrückliche Handlung, und die Antwort darauf ist,
      * ihn zu zeigen. */
     fitToComparison();
+    platziereMarke();
     syncHash();
   }
+
+  /* Die Marke steht ueber der Nordkante des Umrisses. Liegt die Nordkante nah am
+   * oberen Kartenrand, ragt sie hinaus — bei 420x380 war sie zehn Pixel ueber
+   * dem Sichtbereich und damit halb abgeschnitten. Dann klappt sie unter die
+   * Kante, in den Umriss hinein: dort ist immer Platz, und ein Ortsname im
+   * Umriss ist die gewohnte Kartenlesart.
+   *
+   * Gemessen statt geraten, weil die Hoehe der Marke von der Schrift abhaengt.
+   * Laeuft nach jedem Verschieben der Karte, nicht nur beim Einblenden: die
+   * Kante wandert beim Zoomen. */
+  function platziereMarke() {
+    if (!cityLabel) return;
+    var el = cityLabel.getElement();
+    if (!el) return;
+    el.classList.remove("unten");
+    var marke = el.getBoundingClientRect();
+    var karte = map.getContainer().getBoundingClientRect();
+    if (marke.height && marke.top < karte.top) el.classList.add("unten");
+  }
+
+  map.on("moveend zoomend", platziereMarke);
 
   /* Ausschnitt über Brand und aktiven Stadtumriss. Ohne aktiven Vergleich fällt
    * es auf den Brand allein zurück. Weniger Rand als bei der Brandansicht, weil
@@ -872,8 +899,13 @@ $(document).ready(function () {
       return;
     }
 
+    /* Ohne Zoom-Animation. Nicht aus Geschmack: waehrend der Animation steht die
+     * Marke des Stadtumrisses noch an ihrem alten Platz, waehrend die Karte
+     * schon woanders ist — platziereMarke() maesse dann einen Zwischenstand und
+     * klappte die Marke falsch oder gar nicht um. Der Sprung ist ausserdem
+     * derselbe, den der Brandwechsel ohnehin macht. */
     var b = getBounds();
-    if (b && b.isValid()) map.fitBounds(b.pad(padding));
+    if (b && b.isValid()) map.fitBounds(b.pad(padding), { animate: false });
   }
 
   function fireBounds(f) {

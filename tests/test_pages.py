@@ -401,8 +401,48 @@ class TestStaedteauswahl(unittest.TestCase):
                     f"{city['slug']} hat keinen Namen für {sprache}",
                 )
 
+    def test_jeder_brand_hat_eine_voreingestellte_vergleichsstadt(self):
+        """Ohne das Feld compare bleibt der Größenvergleich in jeder Einbettung
+        aus, die keinen Anker mit Stadt trägt — und das ist der Code, den
+        app/konfigurieren.html in der Voreinstellung ausgibt. Gesetzt wird es von
+        bin/fetch_ems.py; nach einer Änderung der Städteliste holt
+        `python3 bin/fetch_ems.py --compare` es ohne Netz nach."""
+        vorhanden = {city["slug"] for city in cities_daten()}
+        for fire in fires_daten():
+            self.assertIn(
+                "compare",
+                fire,
+                f"{fire['slug']} nennt keine Vergleichsstadt — bin/fetch_ems.py --compare setzt sie nach",
+            )
+            self.assertIn(
+                fire["compare"],
+                vorhanden,
+                f"{fire['slug']} zeigt auf die Stadt {fire['compare']}, die es in cities.js nicht gibt",
+            )
+
+    def test_kuerzel_fuer_ohne_vergleich_ist_keine_stadt(self):
+        """Im Anker steht `none` für den ausdrücklich abgeschalteten Vergleich.
+        Trüge eine Stadt dieses Kürzel, ließe sich ihr Vergleich nicht mehr
+        verlinken — die Adresse hieße dann beides."""
+        marke = "none"
+        js = (APP / "assets" / "js" / "fire.js").read_text(encoding="utf-8")
+        self.assertIn(
+            f'var NO_COMPARE = "{marke}"',
+            js,
+            "fire.js nennt ein anderes Kürzel als diese Prüfung",
+        )
+        konfigurator = (APP / "konfigurieren.html").read_text(encoding="utf-8")
+        self.assertIn(
+            f"var OHNE_VERGLEICH = '{marke}'",
+            konfigurator,
+            "Konfigurator und Anwendung nennen verschiedene Kürzel — "
+            "der erzeugte Einbettungscode zeigte dann doch einen Vergleich",
+        )
+        for city in cities_daten():
+            self.assertNotEqual(city["slug"], marke, "eine Stadt heißt wie das Kürzel")
+
     def test_zu_jedem_brand_liegt_eine_stadt_in_der_naehe(self):
-        """markNearestCity schlägt je Brand die nächstgelegene Stadt vor. Fällt
+        """Die Voreinstellung je Brand ist die nächstgelegene Stadt. Fällt
         beim Kürzen die einzige Stadt in der Nähe eines Brandes heraus, ist der
         Vorschlag formal noch da, zeigt aber auf die andere Seite Europas.
         Gemessen wird in Grad, nicht in Kilometern — für eine Obergrenze genügt

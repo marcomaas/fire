@@ -41,6 +41,56 @@ function check(label, ok, detail) {
 	document.getElementById('results').textContent = lines.join('\n');
 }
 
+/* Legt zwei halbdurchsichtige Farben übereinander, so wie der Browser es tut. */
+function ueber(oben, deckkraft, unten) {
+	return oben.map(function (c, i) {
+		return c * deckkraft + unten[i] * (1 - deckkraft);
+	});
+}
+
+function hex(farbe) {
+	return '#' + farbe.map(function (c) {
+		var h = Math.round(c).toString(16);
+		return h.length < 2 ? '0' + h : h;
+	}).join('');
+}
+
+/* Wie farbig bleibt die Brandfläche, wenn der Stadtumriss darüber liegt?
+ *
+ * Kartengrund als heller Reliefton angenommen (#DDD8CE, gemessen an den
+ * Esri-Kacheln der Anwendung). Die Annahme steht hier und nicht verborgen im
+ * Vergleichswert: ein dunklerer Grund ergäbe eine höhere Sättigung, die Prüfung
+ * rechnet also mit dem ungünstigsten der vorkommenden Fälle. */
+function farben(doc) {
+	var GRUND = [221, 216, 206];
+	var lies = function (pfad) {
+		if (!pfad) return null;
+		var f = pfad.getAttribute('fill');
+		var m = /^#(..)(..)(..)$/.exec(f || '');
+		if (!m) return null;
+		return {
+			rgb: [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)],
+			deckkraft: parseFloat(pfad.getAttribute('fill-opacity') || '1')
+		};
+	};
+	var brand = lies(doc.querySelector('.leaflet-overlay-pane path[fill="#BE1313"]'));
+	var stadt = lies(doc.querySelector('.leaflet-overlay-pane path[fill="#FFFFFF"]'));
+	if (!brand || !stadt) {
+		return { brand: brand, stadt: stadt, saettigung: 0, ergebnis: '', stadtDeckkraft: stadt ? stadt.deckkraft : null };
+	}
+	var mitBrand = ueber(brand.rgb, brand.deckkraft, GRUND);
+	var mitStadt = ueber(stadt.rgb, stadt.deckkraft, mitBrand);
+	var max = Math.max.apply(null, mitStadt);
+	var min = Math.min.apply(null, mitStadt);
+	return {
+		brand: brand,
+		stadt: stadt,
+		stadtDeckkraft: stadt.deckkraft,
+		saettigung: max > 0 ? (max - min) / max : 0,
+		ergebnis: hex(mitStadt)
+	};
+}
+
 /* Liest den Zustand einer geladenen Fassung aus. Bewusst über das erzeugte
  * Dokument statt über innere Variablen: geprüft wird, was ein Leser sieht. */
 function zustand(doc, win) {
@@ -64,6 +114,8 @@ function zustand(doc, win) {
 		anzahl: (doc.getElementById('info-count') || {}).textContent || '',
 		datum: (doc.getElementById('map-date') || {}).textContent || '',
 		daten: win._fires || null,
+		marke: (doc.querySelector('.city-label span') || {}).textContent || '',
+		farben: farben(doc),
 		adresse: win.location.search + win.location.hash,
 		vollLink: (function () {
 			var a = doc.querySelector('.leaflet-control-attribution a[href*="apps.datenfreunde.com"]');
@@ -115,8 +167,19 @@ var FAELLE = [
 				z.liste.length === ALLE.length, z.liste.join(','));
 			check('ohne Angabe | erster Brand ist aktiv',
 				z.aktiv === ALLE[0], 'aktiv ' + z.aktiv);
-			check('ohne Angabe | kein Stadtvergleich',
-				z.stadt === '' || z.stadt === null, 'Stadt ' + JSON.stringify(z.stadt));
+			/* Ohne Angabe gilt die Voreinstellung aus den Daten. Erwartet wird das
+			 * Feld compare des aktiven Brandes, kein im Test wiederholtes Kürzel:
+			 * ändert sich die Städteliste, soll diese Prüfung der Änderung folgen
+			 * und nicht an einem festgeschriebenen Namen scheitern. */
+			var brand = (z.daten || []).filter(function (f) { return f.slug === z.aktiv; })[0];
+			check('ohne Angabe | Brand nennt eine Vergleichsstadt',
+				!!brand && !!brand.compare, 'compare ' + (brand ? brand.compare : '—'));
+			check('ohne Angabe | Standardvergleich ist eingeblendet',
+				!!brand && z.stadt === brand.compare,
+				'Stadt ' + JSON.stringify(z.stadt) + ', erwartet ' + (brand ? brand.compare : '—'));
+			check('ohne Angabe | Anker nennt die eingeblendete Stadt',
+				!!brand && z.adresse.indexOf('#' + z.aktiv + '/' + brand.compare) !== -1,
+				'Adresse ' + z.adresse);
 		}
 	},
 	{
@@ -132,6 +195,58 @@ var FAELLE = [
 		pruefe: function (z) {
 			check('Anker mit Stadt | Brand stimmt', z.aktiv === 'fontainebleau', 'aktiv ' + z.aktiv);
 			check('Anker mit Stadt | Stadt ist eingeblendet', z.stadt === 'paris', 'Stadt ' + z.stadt);
+		}
+	},
+	{
+		name: 'Voreinstellung folgt dem Brand',
+		url: '../app/index-de.html#fontainebleau',
+		pruefe: function (z) {
+			var brand = (z.daten || []).filter(function (f) { return f.slug === 'fontainebleau'; })[0];
+			check('Voreinstellung | anderer Brand, andere Stadt',
+				!!brand && z.stadt === brand.compare && brand.compare !== 'bordeaux',
+				'Stadt ' + z.stadt + ', compare ' + (brand ? brand.compare : '—'));
+		}
+	},
+	{
+		name: 'ausdrücklich ohne Vergleich',
+		url: '../app/index-de.html#gironde/none',
+		pruefe: function (z) {
+			/* Das Gegenstück zur Voreinstellung: eine Redaktion, die im Konfigurator
+			 * "ohne Vergleich" wählt, bekommt diesen Anker. Bliebe er wirkungslos,
+			 * zeigte die Einbettung etwas anderes als bestellt. */
+			check('ohne Vergleich | Brand stimmt', z.aktiv === 'gironde', 'aktiv ' + z.aktiv);
+			check('ohne Vergleich | keine Stadt eingeblendet',
+				z.stadt === '' || z.stadt === null, 'Stadt ' + JSON.stringify(z.stadt));
+			check('ohne Vergleich | keine Beschriftung auf der Karte',
+				!z.marke, 'Marke "' + z.marke + '"');
+			check('ohne Vergleich | Anker bleibt erhalten',
+				z.adresse.indexOf('#gironde/none') !== -1, 'Adresse ' + z.adresse);
+		}
+	},
+	{
+		name: 'Vergleichsstadt bleibt Signalfarbe',
+		url: '../app/index-de.html#gironde/london',
+		pruefe: function (z) {
+			/* Befund 5 des Sprints: die weiße Füllung des Stadtumrisses wusch die
+			 * Brandfläche aus — bei der größten Stadt über dem kleineren Brand
+			 * erschien das ganze Gebiet blassrosa statt signalrot.
+			 *
+			 * Gerechnet statt geschaut: die Prüfung liest die tatsächlichen
+			 * Zeichenangaben aus dem Dokument und legt die Farben übereinander wie
+			 * der Browser es tut — Brandfläche über hellem Kartengrund, Stadtumriss
+			 * darüber. Ein Bildvergleich bräuchte ein Bildschirmfoto und wäre gegen
+			 * jede Kachel-Änderung empfindlich; die Deckkraft allein wiederum sagt
+			 * nichts darüber, was dabei herauskommt. */
+			check('Signalfarbe | Brandfläche gezeichnet', !!z.farben.brand,
+				'keine rote Fläche gefunden');
+			check('Signalfarbe | Stadtumriss gezeichnet', !!z.farben.stadt,
+				'keine weiße Fläche gefunden');
+			if (z.farben.brand && z.farben.stadt) {
+				check('Signalfarbe | Rot bleibt gesättigt unter dem Umriss',
+					z.farben.saettigung >= 0.5,
+					'Sättigung ' + z.farben.saettigung.toFixed(2) + ' bei Deckkraft ' +
+					z.farben.stadtDeckkraft + ' — ergibt ' + z.farben.ergebnis);
+			}
 		}
 	},
 	{

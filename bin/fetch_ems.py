@@ -677,7 +677,7 @@ def annotate_compare(fires):
     """
     cities = load_cities()
     if not cities:
-        print("Keine Staedte gefunden - Voreinstellung des Vergleichs uebersprungen.", file=sys.stderr)
+        print("Keine Städte gefunden — Voreinstellung des Vergleichs übersprungen.", file=sys.stderr)
         return
     for fire in fires:
         slug = nearest_city(fire["center"], cities)
