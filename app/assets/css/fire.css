@@ -1014,16 +1014,33 @@ html.in-frame #main {
 	}
 }
 
-/* Nebenangaben zugeklappt — in flachen UND in schmalen Rahmen. Die zweite
- * Bedingung kommt aus einer Messung bei 360x640: dort war der Kasten 325 Pixel
- * hoch, also die halbe Rahmenhoehe, und verdeckte 53 Prozent der Brandflaeche.
- * Nicht weil viel drinstand, sondern weil in 204 Pixel Breite jeder Satz auf
- * drei Zeilen umbricht. Ein Umbruch bleibt ein Umbruch, gleich wie hoch der
- * Rahmen ist — deshalb greift hier die Breite und nicht die Hoehe.
+/* Nebenangaben zugeklappt. Drei Bedingungen, jede aus einer Messung:
+ *
+ *   max-height: 440px   flache Rahmen. Der Kasten stapelte Zahl, Datum,
+ *                       Zeitstrahl, einen Satz Zusammenfassung und einen Absatz
+ *                       Nebenangaben und war 144 Pixel hoch — bei 380 Pixel
+ *                       Rahmenhoehe zwei Fuenftel des Bildes.
+ *
+ *   max-width: 460px    schmale Rahmen. Bei 360x640 war der Kasten 325 Pixel
+ *                       hoch, also die halbe Rahmenhoehe, und verdeckte 53
+ *                       Prozent der Brandflaeche. Nicht weil viel drinstand,
+ *                       sondern weil in 204 Pixel Breite jeder Satz auf drei
+ *                       Zeilen umbricht. Ein Umbruch bleibt ein Umbruch, gleich
+ *                       wie hoch der Rahmen ist.
+ *
+ *   540 x 700 zusammen  kleine Rahmen, die in keiner Richtung auffallen. Bei
+ *                       470x470 war der Kasten 250 Pixel hoch und verdeckte 77
+ *                       Prozent der Brandflaeche — die Flaeche lag unmittelbar
+ *                       darueber. Weder flach noch schmal, und trotzdem der
+ *                       schlechteste gemessene Fall. Beide Grenzen zusammen,
+ *                       damit die Regel nicht auf 960x540 greift: dort verdeckt
+ *                       derselbe Kasten 3 Prozent, und die Angaben sollen offen
+ *                       dastehen.
  *
  * Zugeklappt heisst nicht weg: der Griff darueber ist sichtbar und beschriftet,
- * und die Layout-Pruefung verlangt, dass er sich oeffnen laesst. */
-@media (max-height: 440px), (max-width: 460px) {
+ * und die Layout-Pruefung verlangt, dass er sich oeffnen laesst und dass der
+ * Kasten zugeklappt tatsaechlich kuerzer ist. */
+@media (max-height: 440px), (max-width: 460px), (max-height: 540px) and (max-width: 700px) {
 	#map-controls {
 		--compact: 1;
 	}
