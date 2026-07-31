@@ -200,6 +200,28 @@ class TestPflichtverweise(unittest.TestCase):
         readme = (WURZEL / "README.md").read_text(encoding="utf-8")
         self.assertIn("MIT-Lizenz", readme, "README nennt die Lizenz des Codes nicht")
 
+    def test_openstreetmap_wird_in_der_form_genannt_die_die_odbl_verlangt(self):
+        """Rechteinhaber sind die Mitwirkenden, nicht OpenStreetMap und dazu noch
+        weitere. "OpenStreetMap und Mitwirkende" stand in beispiel.html und im
+        README, während LICENSE und beide englischen Fassungen die richtige Form
+        trugen — dieselbe Angabe, vier Schreibweisen.
+        """
+        for pfad in eigene_dateien(".md") + eigene_dateien(".html") + [WURZEL / "LICENSE"]:
+            roh = pfad.read_text(encoding="utf-8")
+            if "OpenStreetMap" not in roh:
+                continue
+            text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", roh))
+            name = pfad.relative_to(WURZEL)
+            self.assertNotIn(
+                "OpenStreetMap und Mitwirkende",
+                text,
+                f"{name} nennt OpenStreetMap und die Mitwirkenden als zwei Parteien",
+            )
+            self.assertTrue(
+                "OpenStreetMap-Mitwirkende" in text or "OpenStreetMap contributors" in text,
+                f"{name} nennt OpenStreetMap, aber nicht die Mitwirkenden als Rechteinhaber",
+            )
+
     def test_anwendung_verlinkt_die_beispielseite(self):
         for seite, beispiel in [
             ("index-de.html", "beispiel.html"),
@@ -233,10 +255,7 @@ class TestKeineFestenZahlenImText(unittest.TestCase):
         """Der eigentliche Fehler war nicht ein fehlendes Element, sondern eine
         Zahl im Satz. Diese Prüfung greift auf jeder Seite, auch auf einer neu
         angelegten, und braucht keine Pflegeliste."""
-        zahlwoerter = (
-            "zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn"
-            "|two|three|four|five|six|seven|eight|nine|ten"
-        )
+        zahlwoerter = "zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|two|three|four|five|six|seven|eight|nine|ten"
         muster = re.compile(rf"\b({zahlwoerter})\s+(Brände|Bränden|fires)\b")
         # Nur ausgelieferte Seiten. Die Testseiten unter tests/ beschreiben in
         # ihren Kommentaren vergangene Messungen und sind ohnehin nie öffentlich.

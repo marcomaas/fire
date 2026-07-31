@@ -202,5 +202,5 @@ und widersprachen damit genau der Datei, auf die sie verwiesen.
 Die **Daten** folgen nicht der Lizenz des Codes:
 
 Brandperimeter: Copernicus EMS Rapid Mapping, © Europäische Union.
-Stadtgrenzen: OpenStreetMap und Mitwirkende, ODbL.
+Stadtgrenzen: OpenStreetMap-Mitwirkende, ODbL.
 Reliefkarte: Esri.
