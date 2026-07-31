@@ -107,6 +107,23 @@ Diese Tests entstanden aus vier tatsächlich aufgetretenen Fehlern und fanden be
 sofort sechzehn weitere. Beim Erweitern gilt: jede neue Prüfung einmal gegen eine eingebaute
 Mutation laufen lassen — ein Test, der nicht rot werden kann, ist wertlos.
 
+```bash
+python3 tests/mutate_layout.py        # beißen die Layout-Prüfungen?
+python3 tests/mutate_routing.py       # beißen die Routing-Prüfungen?
+```
+
+Beide bauen jeden Fehler, den die zugehörige Testseite fangen soll, einmal absichtlich in eine
+Kopie des Baums ein und verlangen, dass genau die zugehörige Prüfung rot wird. Eine Mutation,
+die niemand fängt, ist eine Prüfung, die nichts prüft; eine Mutation, deren Textstelle im Code
+nicht mehr zu finden ist, gilt ebenfalls als Fehlschlag — sonst würde der Lauf nach jeder
+Umbenennung still grün. Der Harnisch steckt in `mutate_routing.py`, `mutate_layout.py` setzt
+nur Testseite und Zeitbudget um.
+
+Dieser Lauf ist keine Formsache. Von zehn Layout-Mutationen blieben beim ersten Durchgang drei
+ungefangen: zwei davon waren wirkungslos formuliert (ein Rasterelement landet auch ohne Regel
+in der zweiten Reihe; `pointer-events: none` hält keinen Klick über die Ereignisschnittstelle
+auf), die dritte deckte eine Prüfung auf, die nicht rot werden konnte.
+
 **Warum im `iframe` und nicht im Fenster:** Headless Chrome erzwingt eine Mindestfensterbreite
 von 500 Pixel. Ein Lauf mit `--window-size=400` rendert bei 500 und beschneidet nur das Bild —
 schmale Layouts lassen sich so nicht prüfen, und der Beschnitt sieht wie ein Layout-Fehler aus.

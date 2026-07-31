@@ -379,9 +379,16 @@ function testFrame(page, vp, win, doc) {
 			});
 			var zeile = kasten.querySelector('.list-hint');
 			if (!aussen) {
-				check(tag + ' | ' + sel + ' ohne verdeckte Einträge ohne Hinweiszeile',
-					!visible(zeile),
-					zeile ? 'Zeile sichtbar mit "' + zeile.textContent.trim() + '"' : '');
+				/* Geprüft wird der Text, nicht die Sichtbarkeit. Der Mutationslauf
+				 * hat gezeigt, dass eine Prüfung auf "unsichtbar" hier nicht
+				 * beißen kann: die Zeile ist absolut positioniert und ohne Text
+				 * null Pixel breit, also nach jedem Maß unsichtbar — auch dann,
+				 * wenn das Stylesheet sie fälschlich einblendet. Falsch wäre eine
+				 * Auskunft über Einträge, die es nicht gibt; genau die steht im
+				 * Text. */
+				check(tag + ' | ' + sel + ' ohne verdeckte Einträge ohne Hinweis',
+					!zeile || zeile.textContent.trim() === '',
+					zeile ? 'Zeile sagt "' + zeile.textContent.trim() + '"' : '');
 				return;
 			}
 			check(tag + ' | ' + sel + ' Hinweiszeile sichtbar', visible(zeile),
@@ -432,6 +439,15 @@ function testFrame(page, vp, win, doc) {
 			strahl.t >= Math.max(zahl.b, datum.b) - 1,
 			'Zeitstrahl oben ' + Math.round(strahl.t) + ', Zeile endet ' +
 			Math.round(Math.max(zahl.b, datum.b)));
+
+		/* Und er nutzt die ganze Breite des Kastens. Fällt er auf die erste
+		 * Rasterspalte zurück, verliert er ein Drittel seiner Länge — die Achse
+		 * ist dann kürzer, ohne dass irgendwo etwas überlappt oder abgeschnitten
+		 * wäre. Genau das blieb unentdeckt, bis der Mutationslauf danach fragte. */
+		check(tag + ' | Zeitstrahl nutzt die ganze Breite',
+			strahl.r >= Math.max(zahl.r, datum.r) - 1,
+			'Zeitstrahl rechts ' + Math.round(strahl.r) + ', Zeile reicht bis ' +
+			Math.round(Math.max(zahl.r, datum.r)));
 	}
 
 	/* Gemessen wird die Höhe, nicht die Sichtbarkeit der Beschriftung. Chrome 150
@@ -457,6 +473,15 @@ function testFrame(page, vp, win, doc) {
 			/* Zugeklappt genügt nicht — es muss sich auch öffnen lassen, sonst
 			 * wäre die Auskunft schlicht weg. Und die Beschriftung muss danach
 			 * innerhalb des Aufklappers liegen, nicht irgendwo. */
+
+			/* Vor dem Klick: nimmt der Griff überhaupt Zeigerereignisse an? Ein
+			 * Klick aus dem Skript feuert auch bei pointer-events: none — die
+			 * Prüfung darunter blieb deshalb grün, während der Griff für einen
+			 * Menschen unbedienbar war. Vom Mutationslauf aufgedeckt. */
+			check(tag + ' | Aufklapp-Griff nimmt Zeigerereignisse an',
+				win.getComputedStyle(griff).pointerEvents !== 'none',
+				'pointer-events: ' + win.getComputedStyle(griff).pointerEvents);
+
 			griff.click();
 			var auf = rect(aufklapper);
 			var cap = rect(beschriftung);
