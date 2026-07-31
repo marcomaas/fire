@@ -178,17 +178,27 @@ MUTATIONEN = [
         "kein Aufklapp-Griff, wo Platz ist",
     ),
     # ---- Brandflaeche hinter den Kaesten ----
+    #
+    # Vorher stand hier die weggefallene Schwelle der kompakten Anzeige. Die
+    # faengt diese Pruefung nicht mehr — sie steht jetzt weiter unten gegen die
+    # Pruefung, die sie faengt. Damit die Messung des verdeckten Anteils selbst
+    # bewiesen bleibt, waechst der Kasten hier auf die volle Kartenhoehe: der
+    # gleiche Fehler in seiner groben Form.
     Mutation(
         "Zustandsanzeige waechst ueber die Brandflaeche",
         CSS,
-        """@media (max-height: 440px), (max-width: 460px), (max-height: 540px) and (max-width: 700px) {
-	#map-controls {
-		--compact: 1;
-	}""",
-        """@media (max-height: 440px), (max-width: 460px) {
-	#map-controls {
-		--compact: 1;
-	}""",
+        """	position: absolute;
+	left: var(--gutter);
+	bottom: var(--gutter);
+	z-index: 700;
+	background: var(--color-white);""",
+        """	position: absolute;
+	left: var(--gutter);
+	bottom: var(--gutter);
+	top: var(--gutter);
+	right: var(--gutter);
+	z-index: 700;
+	background: var(--color-white);""",
         "Brandfläche nicht hinter den Kästen",
     ),
     # ---- Voreingestellter Groessenvergleich ----
