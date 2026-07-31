@@ -32,16 +32,31 @@ SIMPLIFY_TOLERANCE = 0.0008
 MAX_VERTICES_PER_RING = 400
 
 # label: Anzeigename. query: Nominatim-Suche, falls keine lokale Datei existiert.
+#
+# Fuenf Staedte, bewusst kurz gehalten. Vorher standen neun in der Liste, und die
+# Staedteliste in der Anwendung war damit laenger als der Platz, den ein
+# eingebetteter Rahmen ihr laesst — der neunte Eintrag war nur nach unentdecktem
+# Scrollen erreichbar. Ausgewaehlt sind:
+#
+#   bordeaux, paris, madrid  die naechstgelegene Stadt zu je einem der Braende
+#                            (markNearestCity in app/assets/js/fire.js schlaegt
+#                            sie vor — ohne sie haette der Vorschlag keinen
+#                            Kandidaten in der Naehe)
+#   berlin                   der gewohnte Flaechenmassstab der deutschen Fassung
+#   london                   derselbe fuer die englische, und die groesste Flaeche
+#                            der Auswahl
+#
+# Draussen sind Hamburg, Muenchen und Koeln — sie liegen als Flaechenmassstab
+# nahe an Berlin und bringen keine weitere Groessenordnung — sowie Manhattan: es
+# ist nicht europaeisch, und die Anwendung sagt in Titel und Beschreibung, dass
+# sie europaeische Braende mit Staedten vergleicht. Die Umrisse bleiben unter
+# data/ liegen, ein Wiederaufnehmen ist eine Zeile hier.
 CITIES = [
     {"slug": "bordeaux", "label": {"de": "Bordeaux", "en": "Bordeaux"}, "query": "Bordeaux, France"},
     {"slug": "madrid", "label": {"de": "Madrid", "en": "Madrid"}, "query": "Madrid, Spain"},
     {"slug": "paris", "label": {"de": "Paris", "en": "Paris"}, "file": "paris.geojson"},
     {"slug": "berlin", "label": {"de": "Berlin", "en": "Berlin"}, "file": "berlin.geojson"},
-    {"slug": "hamburg", "label": {"de": "Hamburg", "en": "Hamburg"}, "file": "hamburg.geojson"},
-    {"slug": "muenchen", "label": {"de": "München", "en": "Munich"}, "file": "muenchen.geojson"},
-    {"slug": "koeln", "label": {"de": "Köln", "en": "Cologne"}, "file": "koeln.geojson"},
     {"slug": "london", "label": {"de": "London", "en": "London"}, "file": "london.geojson"},
-    {"slug": "manhattan", "label": {"de": "Manhattan", "en": "Manhattan"}, "file": "manhattan.geojson"},
 ]
 
 

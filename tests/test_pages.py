@@ -115,6 +115,35 @@ def fires_daten():
     return json.loads(roh[roh.index("=") + 1 :].strip().rstrip(";"))
 
 
+def cities_daten():
+    roh = (APP / "assets" / "data" / "cities.js").read_text(encoding="utf-8")
+    return json.loads(roh[roh.index("=") + 1 :].strip().rstrip(";"))
+
+
+def gebaute_staedte():
+    """Die Kürzel aus der Liste CITIES in bin/build_cities.py, in ihrer Reihenfolge.
+
+    Über den Syntaxbaum statt über eine Regex: die Liste enthält Umlaute in den
+    Anzeigenamen und wird von Hand gepflegt.
+    """
+    baum = ast.parse((WURZEL / "bin" / "build_cities.py").read_text(encoding="utf-8"))
+    for knoten in ast.walk(baum):
+        if isinstance(knoten, ast.Assign):
+            ziele = [z.id for z in knoten.targets if isinstance(z, ast.Name)]
+            if "CITIES" in ziele and isinstance(knoten.value, ast.List):
+                kuerzel = []
+                for eintrag in knoten.value.elts:
+                    werte = dict(
+                        zip(
+                            [k.value for k in eintrag.keys],
+                            [v.value if isinstance(v, ast.Constant) else None for v in eintrag.values],
+                        )
+                    )
+                    kuerzel.append(werte["slug"])
+                return kuerzel
+    raise AssertionError("CITIES nicht in bin/build_cities.py gefunden")
+
+
 class TestSeitenGeruest(unittest.TestCase):
     def test_alle_seiten_existieren(self):
         for name in SEITEN:
@@ -315,6 +344,84 @@ class TestKeineFestenZahlenImText(unittest.TestCase):
         self.assertEqual(len(slugs), len(set(slugs)), "doppelte Slugs")
         for slug in slugs:
             self.assertRegex(slug, r"^[a-z0-9-]+$", f"Slug {slug!r} taugt nicht als Anker")
+
+
+class TestStaedteauswahl(unittest.TestCase):
+    """Die Städteliste ist kuratiert, nicht gewachsen.
+
+    Sie war einmal neun Einträge lang, und in einem eingebetteten Rahmen war der
+    letzte nur nach unentdecktem Scrollen erreichbar. Eine Obergrenze im Test
+    hält die Entscheidung fest: eine sechste Stadt macht diese Prüfung rot und
+    verlangt damit, dass jemand die Wahl trifft, statt sie anzuhängen.
+    """
+
+    OBERGRENZE = 5
+
+    # Städte außerhalb Europas, die einmal in der Liste standen. Titel,
+    # Beschreibung und Info-Kasten aller Fassungen sprechen von einem Vergleich
+    # mit europäischen Städten — ein Eintrag hier widerlegt sie.
+    AUSSEREUROPAEISCH = ["manhattan", "sacramento", "new-york", "yosemite"]
+
+    def test_liste_bleibt_bei_fuenf_eintraegen(self):
+        slugs = [c["slug"] for c in cities_daten()]
+        self.assertEqual(
+            len(slugs),
+            self.OBERGRENZE,
+            f"cities.js führt {len(slugs)} Städte ({', '.join(slugs)}) — kuratiert sind {self.OBERGRENZE}",
+        )
+        self.assertEqual(len(slugs), len(set(slugs)), "doppelte Städte")
+
+    def test_keine_aussereuropaeische_stadt(self):
+        slugs = [c["slug"] for c in cities_daten()]
+        for verboten in self.AUSSEREUROPAEISCH:
+            self.assertNotIn(
+                verboten,
+                slugs,
+                f"{verboten} liegt nicht in Europa, die Seitenbeschreibung behauptet es aber",
+            )
+
+    def test_daten_und_bauskript_nennen_dieselben_staedte(self):
+        """Die ausgelieferte Datei und die Liste, aus der sie entsteht, dürfen
+        nicht auseinanderlaufen. Genau das passiert sonst beim Kürzen von Hand:
+        cities.js wird kleiner, der nächste Lauf von bin/build_cities.py macht
+        alles rückgängig."""
+        self.assertEqual(
+            [c["slug"] for c in cities_daten()],
+            gebaute_staedte(),
+            "cities.js und CITIES in bin/build_cities.py stimmen nicht überein",
+        )
+
+    def test_jede_stadt_hat_umriss_und_mittelpunkt(self):
+        for city in cities_daten():
+            self.assertTrue(city["rings"], f"{city['slug']} hat keinen Umriss")
+            self.assertEqual(len(city["center"]), 2, f"{city['slug']} hat keinen Mittelpunkt")
+            for sprache in ("de", "en"):
+                self.assertTrue(
+                    city["label"].get(sprache),
+                    f"{city['slug']} hat keinen Namen für {sprache}",
+                )
+
+    def test_zu_jedem_brand_liegt_eine_stadt_in_der_naehe(self):
+        """markNearestCity schlägt je Brand die nächstgelegene Stadt vor. Fällt
+        beim Kürzen die einzige Stadt in der Nähe eines Brandes heraus, ist der
+        Vorschlag formal noch da, zeigt aber auf die andere Seite Europas.
+        Gemessen wird in Grad, nicht in Kilometern — für eine Obergrenze genügt
+        das."""
+        staedte = cities_daten()
+        for fire in fires_daten():
+            abstaende = [
+                max(
+                    abs(city["center"][0] - fire["center"][0]),
+                    abs(city["center"][1] - fire["center"][1]),
+                )
+                for city in staedte
+            ]
+            self.assertLess(
+                min(abstaende),
+                6.0,
+                f"zu {fire['slug']} liegt keine der Städte näher als 6 Grad — "
+                f"der Vorschlag der nächstgelegenen Stadt wird unbrauchbar",
+            )
 
 
 class TestUeberDenGanzenBaum(unittest.TestCase):

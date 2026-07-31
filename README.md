@@ -1,7 +1,7 @@
 # Waldbrand-Visualisierung
 
 Interaktive Karte, die kartierte Brandflächen im zeitlichen Verlauf zeigt und ihre
-Fläche mit dem Umriss einer Stadt vergleicht — europäische Städte und Manhattan.
+Fläche mit dem Umriss einer europäischen Stadt vergleicht.
 
 Gezeigt wird eine **Auswahl**: jene Brände, für die Copernicus eine Kartierung mit
 mindestens zwei Zeitschnitten veröffentlicht hat. Es brennt an mehr Orten, als hier
@@ -191,8 +191,9 @@ Der Städtevergleich verschiebt den Umriss an den Brandort und behält dabei die
 tatsächliche Fläche — nicht die Form. Weil ein Längengrad in höheren Breiten kürzer
 ist, wird die Ost-West-Ausdehnung mit dem Verhältnis der Breitenkosinus korrigiert
 (`shiftRings` in `app/assets/js/fire.js`). Über weite Strecken ist diese Korrektur
-deutlich sichtbar: Hamburg (53,54° N) auf Artana (39,87° N) wird um 22,6 Prozent
-gestaucht. Der Umriss taugt als Flächenmaßstab, nicht als Stadtgrundriss.
+deutlich sichtbar: Berlin (52,50° N) auf Artana (39,87° N) wird um 20,7 Prozent
+gestaucht — das ist der größte Wert, den die fünf angebotenen Städte über die fünf
+Brände erreichen. Der Umriss taugt als Flächenmaßstab, nicht als Stadtgrundriss.
 
 Die kartierte Fläche kann von einem Stand zum nächsten **sinken**. Verbrannte Fläche
 verschwindet nicht wieder, die kartierte aber schon: Ein späterer Stand grenzt genauer
