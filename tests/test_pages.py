@@ -222,6 +222,19 @@ class TestPflichtverweise(unittest.TestCase):
                 f"{name} nennt OpenStreetMap, aber nicht die Mitwirkenden als Rechteinhaber",
             )
 
+    def test_jede_seite_verlinkt_die_konfigurationsseite(self):
+        """Sie ist der einzige Weg, einen eingeschränkten Einbettungscode zu
+        bekommen, ohne die Adresse von Hand zu bauen. Unverlinkt findet sie
+        niemand."""
+        for name in SEITEN:
+            if name == "konfigurieren.html":
+                continue
+            self.assertIn(
+                'href="konfigurieren.html"',
+                lade(name),
+                f"{name} verlinkt die Konfigurationsseite nicht",
+            )
+
     def test_anwendung_verlinkt_die_beispielseite(self):
         for seite, beispiel in [
             ("index-de.html", "beispiel.html"),
