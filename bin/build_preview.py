@@ -157,17 +157,17 @@ def pruefe_inhalt(dom: str, fires: list[dict], cities: list[dict], brand: dict) 
 
     brand_eintraege = len(re.findall(r'data-fire="', dom))
     if brand_eintraege != len(fires):
-        maengel.append(f"{brand_eintraege} Brand-Eintraege im Bild, {len(fires)} in den Daten")
+        maengel.append(f"{brand_eintraege} Brand-Einträge im Bild, {len(fires)} in den Daten")
 
     stadt_eintraege = len(re.findall(r'data-city="[^"]+"', dom))
     if stadt_eintraege != len(cities):
-        maengel.append(f"{stadt_eintraege} Staedte im Bild, {len(cities)} in den Daten")
+        maengel.append(f"{stadt_eintraege} Städte im Bild, {len(cities)} in den Daten")
 
     # Die Zahl im Kasten muss der letzten Aufnahme entsprechen, nicht einer frueheren.
     letzte_ha = brand["steps"][-1]["size_ha"]
     treffer = re.search(r'id="map-size"[^>]*>([^<]*)<', dom)
     if not treffer:
-        maengel.append("Flaechenangabe im Bild nicht gefunden")
+        maengel.append("Flächenangabe im Bild nicht gefunden")
     else:
         text = html.unescape(treffer.group(1))
         ziffern = re.sub(r"[^\d]", "", text.split("(")[-1]) or "0"
@@ -175,14 +175,14 @@ def pruefe_inhalt(dom: str, fires: list[dict], cities: list[dict], brand: dict) 
         # Ganzzahlig gerundet, wie die Anwendung es ausgibt.
         if abs(gezeigt - round(letzte_ha)) > 1:
             maengel.append(
-                f"Flaechenangabe im Bild ist {gezeigt} ha, letzte Aufnahme hat "
+                f"Flächenangabe im Bild ist {gezeigt} ha, letzte Aufnahme hat "
                 f"{round(letzte_ha)} ha — die Animation war noch nicht am Ende"
             )
 
     # Leaflet haengt eigene Klassen an den Marker (leaflet-div-icon, ...), ein
     # exakter Vergleich auf class="city-label" trifft deshalb nie.
     if "city-label" not in dom:
-        maengel.append("kein Stadtumriss beschriftet — der Groessenvergleich fehlt im Bild")
+        maengel.append("kein Stadtumriss beschriftet — der Größenvergleich fehlt im Bild")
 
     return maengel
 
@@ -209,7 +209,7 @@ def main(argv: list[str]) -> int:
 
     chrome = finde_chrome()
     if not chrome:
-        print("Chrome nicht gefunden — Vorschaubild uebersprungen.", file=sys.stderr)
+        print("Chrome nicht gefunden — Vorschaubild übersprungen.", file=sys.stderr)
         return 0  # Kein Browser ist kein Fehler, sondern eine fehlende Voraussetzung.
 
     fires = lade_daten("fires.js")
@@ -221,7 +221,7 @@ def main(argv: list[str]) -> int:
     brand = waehle_brand(fires)
     anker = f"#{brand['slug']}" + (f"/{brand['compare']}" if brand.get("compare") else "")
     print(
-        f"Brand mit der groessten Flaeche: {brand['slug']} ({round(brand['steps'][-1]['size_ha']):,} ha)".replace(
+        f"Brand mit der größten Fläche: {brand['slug']} ({round(brand['steps'][-1]['size_ha']):,} ha)".replace(
             ",", "."
         )
     )
@@ -242,7 +242,7 @@ def main(argv: list[str]) -> int:
             for m in maengel:
                 print(f"  · {m}", file=sys.stderr)
             return 1
-        print("Inhalt geprueft: Braende, Staedte, Flaechenangabe und Lizenz passen.")
+        print("Inhalt geprüft: Brände, Städte, Flächenangabe und Lizenz passen.")
 
         if args.check:
             print("--check: nichts geschrieben.")

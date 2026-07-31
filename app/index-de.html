@@ -52,16 +52,22 @@
 				</div>
 				<div id="map-compare">
 					<h2>Größenvergleich</h2>
-					<ul></ul>
-					<p class="compare-legend" hidden></p>
 					<!-- Erklärt den Marker vor einem Eintrag. Ohne sie stand dort ein
 					     Viereck ohne Bedeutung; die Erklärung steckte nur im Hover und war
-					     auf dem Touchscreen nirgends erreichbar. Text setzt fire.js. -->
+					     auf dem Touchscreen nirgends erreichbar. Text setzt fire.js.
+
+					     Steht ÜBER der Liste: unter ihr lag sie an derselben Stelle wie die
+					     Hinweiszeile, die absolut an der Unterkante klebt — gemessene
+					     Überlagerung 43 × 13 Pixel bei 960 × 540, Text auf Text. Über der
+					     Liste kollidiert sie mit nichts und wird gelesen, bevor der Marker
+					     zum ersten Mal auftaucht. -->
+					<ul></ul>
+					<p class="compare-legend" hidden></p>
 					<p class="list-hint" aria-live="polite"></p>
 				</div>
 			</div>
 
-			<!-- Kompakte Auswahl für flache Rahmen. Unter 440 Pixel Höhe tragen die
+			<!-- Kompakte Auswahl für flache Rahmen. Unter 500 Pixel Höhe tragen die
 			     beiden Listen nicht mehr: gemessen war dort nur der erste Eintrag
 			     sichtbar, weil sich Auswahl- und Vergleichsblock die Höhe teilen
 			     müssen. Als Auswahlfeld bleibt die Auswahl vollständig, und die
@@ -242,15 +248,21 @@
 		</div>
 	</div>
 
-	<script src="assets/data/fires.js"></script>
-	<script src="assets/data/cities.js"></script>
+	<!-- defer auf allen Skripten: fires.js ist mit rund 700 KB das schwerste
+	     Asset der Anwendung und blockierte als synchrones Skript den Aufbau —
+	     ausgerechnet im eingebetteten Zustand, wo die Grafik in fremden
+	     Artikeln lädt. defer erhält die Reihenfolge (die Daten müssen vor
+	     fire.js stehen) und führt vor DOMContentLoaded aus, worauf der
+	     $(document).ready-Block in fire.js wartet. -->
+	<script defer src="assets/data/fires.js"></script>
+	<script defer src="assets/data/cities.js"></script>
 	<!-- Voreinstellung der Auswahl. Von Hand pflegbar, wird von ?nur= in der
 	     Adresse überstimmt. -->
-	<script src="assets/data/config.js"></script>
-	<script src="assets/js/jquery.min.js"></script>
-	<script src="assets/vendor/leaflet/leaflet.js"></script>
-	<script src="assets/js/moment.min.js"></script>
-	<script src="assets/js/polymorph.js"></script>
-	<script src="assets/js/fire.js"></script>
+	<script defer src="assets/data/config.js"></script>
+	<script defer src="assets/js/jquery.min.js"></script>
+	<script defer src="assets/vendor/leaflet/leaflet.js"></script>
+	<script defer src="assets/js/moment.min.js"></script>
+	<script defer src="assets/js/polymorph.js"></script>
+	<script defer src="assets/js/fire.js"></script>
 </body>
 </html>

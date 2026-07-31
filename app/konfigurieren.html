@@ -431,8 +431,14 @@
 		return { w: parseInt(teile[0], 10), h: parseInt(teile[1], 10) };
 	}
 
-	function adresse(basis) {
-		var seite = zustand.sprache === 'de' ? '' : 'index-en.html';
+	/* `deutschSeite` ist nötig, weil die veröffentlichte Adresse für Deutsch keinen
+	   Dateinamen braucht (apps.datenfreunde.com/ liefert index-de.html aus), die
+	   Vorschau aber schon: ohne Dateinamen bleibt von der Adresse nur der Anker
+	   übrig, und der löst relativ gegen DIESE Seite auf — die Vorschau lud dann die
+	   Konfigurationsseite in sich selbst. Im Auslieferungszustand, also genau das,
+	   was eine Redaktion beim Öffnen sah. */
+	function adresse(basis, deutschSeite) {
+		var seite = zustand.sprache === 'de' ? (deutschSeite || '') : 'index-en.html';
 		var query = '';
 		/* Nur einschränken, wenn wirklich eingeschränkt wird. Ein ?nur= mit allen
 		   Bränden hängt eine Angabe an, die nichts tut, und veraltet still, sobald
@@ -472,11 +478,11 @@
 		var halter = el('probe-halter');
 		halter.textContent = '';
 		var m = masse();
-		var url = adresse('');
+		var url = adresse('', 'index-de.html');
 		var f = document.createElement('iframe');
 		f.className = 'probe';
 		f.setAttribute('title', 'Vorschau: ' + titel());
-		f.src = url || 'index-de.html';
+		f.src = url;
 		if (m) {
 			f.width = m.w;
 			f.height = m.h;
@@ -495,17 +501,25 @@
 		var m = masse();
 		var w = el('format-warnung');
 		if (!m) { w.hidden = true; return; }
-		/* Unter 440 Pixel Höhe treten Auswahlfelder an die Stelle der beiden
-		   Listen, und ab 380 Pixel Höhe abwärts ist das Layout nicht mehr
-		   geprüft. Beides gehört gesagt, bevor jemand 320 Pixel einträgt. */
+		/* Zwei Schwellen, und sie liegen nicht beieinander: ab 500 Pixel Höhe
+		   abwärts treten Auswahlfelder an die Stelle der beiden Listen, ab 440 Pixel
+		   Höhe (oder 460 Pixel Breite) wird zusätzlich die Bedienleiste kompakt und
+		   die Nebenangaben wandern hinter einen Aufklapper. Unter 420 × 380 ist das
+		   Layout nicht mehr geprüft. Hier stand vorher nur die 440 — wer 960 × 450
+		   eintrug, bekam Auswahlfelder ohne jeden Hinweis darauf. */
 		if (m.h < 380 || m.w < 420) {
 			w.hidden = false;
 			w.textContent = 'Unter 420 × 380 Pixel wird das Layout nicht mehr geprüft — es kann dort '
 				+ 'unbrauchbar werden.';
-		} else if (m.h < 440) {
+		} else if (m.h <= 440 || m.w <= 460) {
+			w.hidden = false;
+			w.textContent = 'Bei dieser Größe zeigt die Grafik zwei Auswahlfelder statt der beiden '
+				+ 'Listen, und die Nebenangaben stehen hinter einem Aufklapper. Das ist Absicht: '
+				+ 'so wenig Höhe tragen die Listen nicht, und die Karte behält ihre Fläche.';
+		} else if (m.h <= 500) {
 			w.hidden = false;
 			w.textContent = 'Bei dieser Höhe zeigt die Grafik zwei Auswahlfelder statt der beiden '
-				+ 'Listen. Das ist Absicht: die Listen tragen so wenig Höhe nicht.';
+				+ 'Listen. Das ist Absicht: so wenig Höhe tragen die Listen nicht.';
 		} else {
 			w.hidden = true;
 		}

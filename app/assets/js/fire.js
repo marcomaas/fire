@@ -879,21 +879,12 @@ $(document).ready(function () {
 
   /* ---------- Kartenausschnitt ---------- */
 
-  /* Setzt den Ausschnitt auf die letzte, größte Ausdehnung — einschließlich der
-   * Nebenflächen, die bei zerstreuten Bränden weit über die Hauptfläche
-   * hinausreichen.
-   *
-   * Der Umweg über invalidateSize und den Wiederholversuch ist nötig, weil
-   * fitBounds die Zoomstufe aus der Containergröße berechnet. Steht die noch
-   * nicht fest — in einem gerade eingefügten iframe der Regelfall — ergibt die
-   * Rechnung eine Stufe unterhalb von minZoom, und Leaflet zeigt statt des
-   * Brandes halb Europa. Trat bei 470 Pixel breiten Rahmen zuverlässig auf,
-   * während die Vollbildansicht unauffällig blieb. */
   /* Setzt einen Ausschnitt und wartet, bis der Container eine brauchbare Größe
-   * hat. Der Wiederholversuch ist zwingend: fitBounds berechnet die Zoomstufe
-   * aus der Containergröße, und in einem gerade eingefügten iframe steht die
-   * noch nicht fest. Die Rechnung ergibt dann eine Stufe unterhalb von minZoom,
-   * und statt des Motivs ist halb Europa zu sehen. */
+   * hat. Der Wiederholversuch ist zwingend: fitBounds berechnet die Zoomstufe aus
+   * der Containergröße. Steht die noch nicht fest — in einem gerade eingefügten
+   * iframe der Regelfall — ergibt die Rechnung eine Stufe unterhalb von minZoom,
+   * und statt des Motivs ist halb Europa zu sehen. Trat bei 470 Pixel breiten
+   * Rahmen zuverlässig auf, während die Vollbildansicht unauffällig blieb. */
   function fitSafely(getBounds, padding, attempt) {
     map.invalidateSize(false);
 
@@ -1152,6 +1143,17 @@ $(document).ready(function () {
    * einmal binden genügt. */
   $("#map-fires ul, #map-compare ul").on("scroll", updateScrollHints);
   $(window).on("resize", updateScrollHints);
+
+  /* Und noch einmal, wenn das Layout wirklich steht. Die Zeile nennt eine Zahl
+   * verdeckter Einträge, und die hängt an gerenderter Geometrie: solange die
+   * Schriften nachladen, sind die Zeilenhöhen andere. Beim Umstellen auf
+   * defer-geladene Skripte fiel das auf — die Zeile sagte „2 weitere", außerhalb
+   * lag einer. Eine Zahl, die im Moment ihres Erscheinens falsch ist, ist
+   * schlimmer als keine. */
+  $(window).on("load", updateScrollHints);
+  if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
+    document.fonts.ready.then(updateScrollHints);
+  }
   $(window).on("resize", applyCardMode);
 
   function buildPickers() {

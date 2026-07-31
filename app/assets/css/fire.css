@@ -885,7 +885,7 @@ html.in-frame #main {
 
 /* Erklaert das Viereck. Nur sichtbar, wenn es eines gibt — fire.js setzt hidden. */
 .compare-legend {
-	margin: 6px 0 0;
+	margin: 0 0 5px;
 	font-size: 10.5px;
 	line-height: 1.35;
 	color: var(--color-blue);
@@ -1001,7 +1001,12 @@ html.in-frame #main {
 		display: flex;
 		flex-direction: row;
 		gap: 8px;
-		left: var(--gutter);
+		/* Nicht bis an die linke Kante: dort sitzt die Zoom-Kontrolle von Leaflet
+		 * auf einer hoeheren Stapelebene und lag ueber Beschriftung und Feld —
+		 * gemessene Ueberlagerung 28 x 58 Pixel bei 420 x 380. Die Kontrolle
+		 * ausblenden waere die andere Loesung; bei einer Karte, deren Ausschnitt
+		 * man verschieben will, ist sie das schlechtere Tauschgeschaeft. */
+		left: 56px;
 		max-width: none;
 	}
 

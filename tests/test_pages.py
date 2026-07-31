@@ -14,6 +14,7 @@ Layout-Testlauf.
 import ast
 import json
 import re
+import struct
 import unittest
 from pathlib import Path
 
@@ -559,3 +560,70 @@ class TestVerweiseZeigenAufVorhandenes(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestVorschaubild(unittest.TestCase):
+    """Das Bild, das bei jedem geteilten Link erscheint.
+
+    Es war bis zum 31.07.2026 von Hand gemacht und zeigte neun Städte statt fünf,
+    drei Brände statt fünf, 26.008 ha statt 31.534 — und in der Herkunftszeile
+    „CC BY", obwohl der Code unter MIT steht. Eine falsche Lizenzangabe in dem
+    einen Bild, das jeder sieht, der den Link teilt, und monatelang unbemerkt: ein
+    PNG sagt von sich aus nicht, aus welchem Datenstand es entstanden ist.
+
+    `bin/build_preview.py` legt deshalb einen Fingerabdruck daneben. Diese Tests
+    vergleichen ihn mit den aktuellen Daten — eine veraltete Karte wird rot,
+    ohne dass jemand das Bild ansehen muss.
+    """
+
+    VORSCHAU = APP / "assets" / "img" / "preview.png"
+    FINGERABDRUCK = APP / "assets" / "img" / "preview.json"
+
+    def _fingerabdruck(self):
+        self.assertTrue(
+            self.FINGERABDRUCK.is_file(),
+            "preview.json fehlt — mit python3 bin/build_preview.py erzeugen",
+        )
+        return json.loads(self.FINGERABDRUCK.read_text(encoding="utf-8"))
+
+    def test_vorschaubild_hat_die_maße_fuer_social_media_karten(self):
+        self.assertTrue(self.VORSCHAU.is_file(), "preview.png fehlt")
+        daten = self.VORSCHAU.read_bytes()
+        self.assertEqual(daten[:8], b"\x89PNG\r\n\x1a\n", "kein PNG")
+        breite, hoehe = struct.unpack(">II", daten[16:24])
+        self.assertEqual(
+            (breite, hoehe),
+            (1200, 630),
+            f"{breite}×{hoehe} statt 1200×630 — unter diesem Maß schneiden die "
+            "Netzwerke die Karte zu oder zeigen sie klein",
+        )
+
+    def test_vorschaubild_zeigt_die_aktuelle_zahl_der_braende(self):
+        self.assertEqual(self._fingerabdruck()["fires"], len(fires_daten()))
+
+    def test_vorschaubild_zeigt_die_aktuelle_zahl_der_staedte(self):
+        roh = (APP / "assets" / "data" / "cities.js").read_text(encoding="utf-8")
+        cities = json.loads(roh[roh.index("=") + 1 :].strip().rstrip(";"))
+        self.assertEqual(self._fingerabdruck()["cities"], len(cities))
+
+    def test_vorschaubild_zeigt_den_groessten_brand_mit_aktueller_flaeche(self):
+        """Der Generator wählt den Brand mit der größten kartierten Fläche. Wächst
+        ein anderer daran vorbei oder wächst derselbe weiter, ist die Karte
+        veraltet — genau der Fall, der vorher niemandem auffiel."""
+        fires = fires_daten()
+        groesster = max(fires, key=lambda f: f["steps"][-1]["size_ha"] if f.get("steps") else 0)
+        abdruck = self._fingerabdruck()
+
+        self.assertEqual(
+            abdruck["slug"],
+            groesster["slug"],
+            f"Karte zeigt {abdruck['slug']}, größter Brand ist inzwischen "
+            f"{groesster['slug']} — mit python3 bin/build_preview.py neu erzeugen",
+        )
+        self.assertAlmostEqual(
+            abdruck["size_ha"],
+            round(groesster["steps"][-1]["size_ha"], 1),
+            places=1,
+            msg="Fläche im Bild weicht von der letzten Aufnahme ab — "
+            "mit python3 bin/build_preview.py neu erzeugen",
+        )

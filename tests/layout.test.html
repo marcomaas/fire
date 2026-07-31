@@ -68,6 +68,11 @@ var BOXES = [
 	 * für die kompakte Darstellung gelten — sonst wäre gerade die engste
 	 * Rahmengröße die am wenigsten geprüfte. */
 	'#map-picker',
+	/* Die Zoom-Kontrolle fehlte hier, und genau deshalb blieb unentdeckt, dass die
+	 * kompakte Auswahl bei 420 × 380 unter ihr lag (gemessen 28 × 58 Pixel). Sie
+	 * liegt auf einer höheren Stapelebene als unsere Kästen — ein z-index hilft
+	 * nicht, man muss ihr ausweichen. */
+	'.leaflet-control-zoom',
 	'.leaflet-control-attribution'
 ];
 
@@ -164,6 +169,18 @@ function testFrame(page, vp, win, doc) {
 			check(tag + ' | ' + keys[i] + ' überlagert ' + keys[j] + ' nicht', !o, o);
 		}
 	}
+
+	/* 4b. Text auf Text im Vergleichsblock. Die Hinweiszeile klebt absolut an der
+	 *     Unterkante, die Legende stand dort ebenfalls — 43 × 13 Pixel Überlagerung
+	 *     bei 960 × 540, also im beworbenen Regelfall. Die Prüfung auf Überlagerung
+	 *     der Kästen sieht das nicht: beide liegen INNERHALB desselben Kastens. */
+	['#map-fires', '#map-compare'].forEach(function (box) {
+		var hint = doc.querySelector(box + ' .list-hint');
+		var legende = doc.querySelector(box + ' .compare-legend');
+		if (!visible(hint) || !visible(legende)) return;
+		var o = overlap(rect(hint), rect(legende));
+		check(tag + ' | ' + box + ': Hinweiszeile und Legende überlagern sich nicht', !o, o);
+	});
 
 	/* 5. Herkunftsangabe vorhanden und einzeilig. Umbrach sie, verdeckte sie
 	 *    die Bedienelemente. */

@@ -87,6 +87,22 @@ jobs:
         if: steps.check.outputs.run == 'true'
         run: python bin/fetch_ems.py
 
+      # Das Vorschaubild für Social-Media-Karten zeigt den Brand mit der größten
+      # Fläche. Wächst er, ist die Karte veraltet — und sie ist das Einzige, was
+      # jemand sieht, der den Link teilt. Läuft nur, wenn sich die Daten wirklich
+      # geändert haben, und schreibt nichts, wenn der Inhalt nicht zu den Daten
+      # passt (eigene Prüfung im Skript). Chrome fehlt auf dem Läufer nicht, der
+      # Test-Workflow nutzt ihn ebenfalls; fehlt er doch, endet das Skript mit 0
+      # und der Datenlauf bleibt davon unberührt.
+      - name: Vorschaubild neu erzeugen
+        if: steps.check.outputs.run == 'true'
+        run: |
+          if git diff --quiet -- app/assets/data/fires.js; then
+            echo 'Datenstand unverändert — Vorschaubild bleibt.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            python bin/build_preview.py || echo '⚠ Vorschaubild nicht erzeugt' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Änderungen committen
         if: steps.check.outputs.run == 'true'
         run: |
@@ -98,6 +114,9 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           git add app/assets/data/fires.js
+          # Bild und Fingerabdruck nur, wenn sie tatsächlich neu entstanden sind:
+          # ohne Chrome bleibt beides unverändert, und ein leeres add wäre ein Fehler.
+          git add --all app/assets/img/preview.png app/assets/img/preview.json 2>/dev/null || true
           git commit -m 'data: Brandperimeter aktualisiert (automatisch)'
 
           # Ein paralleler Push von Hand würde sonst zum Fehlschlag führen.
