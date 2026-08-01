@@ -228,6 +228,15 @@ deutlich sichtbar: Berlin (52,50° N) auf Artana (39,87° N) wird um 20,7 Prozen
 gestaucht — das ist der größte Wert, den die fünf angebotenen Städte über die fünf
 Brände erreichen. Der Umriss taugt als Flächenmaßstab, nicht als Stadtgrundriss.
 
+Welche Stadt zu einem Brand voreingestellt ist, entscheidet die Pipeline: die
+nächstgelegene, solange ihre Fläche in derselben Größenordnung liegt, sonst die
+flächennächste. Die Grenze (`MAX_COMPARE_RATIO`) gibt es, weil Nähe allein zu
+Unsinn führen kann — Fontainebleau (9,24 km²) war mit Paris voreingestellt, und
+der Paris-Umriss stammte aus der Fassung von 2013 und war die **Agglomeration**
+mit 3.112 km². Der Brand war damit ein Punkt in einer Fläche. Paris kommt jetzt
+wie Bordeaux und Madrid aus OpenStreetMap und ist das Stadtgebiet (105 km²);
+Berlin und London bleiben Dateien und waren immer Stadt- bzw. Verwaltungsgebiet.
+
 Die kartierte Fläche kann von einem Stand zum nächsten **sinken**. Verbrannte Fläche
 verschwindet nicht wieder, die kartierte aber schon: Ein späterer Stand grenzt genauer
 ab und nimmt vorher mitgezählte unverbrannte Inseln heraus. Die Zahl fällt dann,

@@ -776,6 +776,67 @@ def nearest_city(center, cities):
     return best
 
 
+# Groesstes zugelassenes Missverhaeltnis zwischen Brand und voreingestellter
+# Vergleichsstadt, in beide Richtungen. Darueber ist es kein Groessenvergleich
+# mehr, sondern ein Punkt in einer Flaeche.
+#
+# Anlass: Fontainebleau (9 km2) war mit Paris voreingestellt, weil Paris die
+# naechstgelegene Stadt ist. Der Paris-Umriss stammte aus der Fassung von 2013
+# und war die Agglomeration — 3.112 km2, also das 337-fache des Brandes. Nach dem
+# Wechsel auf das Stadtgebiet (105 km2) sind es 11,4-fach, und alle sechs Braende
+# liegen unter der Grenze. Sie steht trotzdem hier: die naechstgelegene Stadt ist
+# nicht automatisch eine taugliche Bezugsgroesse, und der naechste kleine Brand
+# neben einer grossen Stadt kommt bestimmt.
+MAX_COMPARE_RATIO = 25.0
+
+
+def city_area_ha(city):
+    """Flaeche eines Stadtumrisses in Hektar, aus den gespeicherten Ringen."""
+    gesamt = 0.0
+    for ring in city.get("rings", []):
+        gesamt += ring_area_m2([(lon, lat) for lat, lon in ring]) / 10000.0
+    return gesamt
+
+
+def compare_city(fire, cities):
+    """Die voreingestellte Vergleichsstadt: die naechstgelegene, wenn ihre Groesse
+    taugt — sonst die flaechennaechste.
+
+    Naehe ist das bessere Kriterium, solange die Groessenordnung stimmt: "so gross
+    wie Bordeaux" sagt fuer einen Brand in der Gironde mehr als "so gross wie
+    Madrid". Jenseits von MAX_COMPARE_RATIO sagt es dagegen gar nichts mehr, und
+    dann zaehlt nur noch, dass sich die beiden Flaechen ueberhaupt vergleichen
+    lassen.
+    """
+    if not cities:
+        return None
+
+    brand_ha = fire["steps"][-1]["size_ha"] if fire.get("steps") else 0.0
+    naechste = nearest_city(fire["center"], cities)
+
+    if brand_ha <= 0:
+        return naechste
+
+    nach_slug = {c["slug"]: c for c in cities}
+    if naechste and naechste in nach_slug:
+        flaeche = city_area_ha(nach_slug[naechste])
+        if flaeche > 0:
+            verhaeltnis = max(flaeche / brand_ha, brand_ha / flaeche)
+            if verhaeltnis <= MAX_COMPARE_RATIO:
+                return naechste
+
+    # Kein tauglicher Nachbar: die Stadt mit dem kleinsten Missverhaeltnis.
+    beste, bestes = naechste, None
+    for city in cities:
+        flaeche = city_area_ha(city)
+        if flaeche <= 0:
+            continue
+        verhaeltnis = max(flaeche / brand_ha, brand_ha / flaeche)
+        if bestes is None or verhaeltnis < bestes:
+            bestes, beste = verhaeltnis, city["slug"]
+    return beste
+
+
 def annotate_compare(fires):
     """Setzt je Brand die voreingestellte Vergleichsstadt.
 
@@ -791,7 +852,7 @@ def annotate_compare(fires):
         print("Keine Städte gefunden — Voreinstellung des Vergleichs übersprungen.", file=sys.stderr)
         return
     for fire in fires:
-        slug = nearest_city(fire["center"], cities)
+        slug = compare_city(fire, cities)
         if slug:
             fire["compare"] = slug
             print(f"   Vergleich voreingestellt: {fire['slug']:14s} -> {slug}", flush=True)

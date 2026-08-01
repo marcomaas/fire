@@ -396,3 +396,111 @@ class TestStuetzpunktzahl(unittest.TestCase):
         for ha in (-10.0, 0.0, 0.1, 4.9):
             self.assertGreaterEqual(fetch_ems.vertices_for(ha), fetch_ems.OTHER_VERTICES_MIN)
             self.assertGreaterEqual(fetch_ems.vertices_for(ha), 3)
+
+
+class TestVergleichsstadt(unittest.TestCase):
+    """compare_city() waehlt die Bezugsgroesse fuer den Groessenvergleich.
+
+    Naehe ist das bessere Kriterium, solange die Groessenordnung stimmt: "so gross
+    wie Bordeaux" sagt fuer einen Brand in der Gironde mehr als "so gross wie
+    Madrid". Jenseits eines bestimmten Missverhaeltnisses sagt es dagegen gar
+    nichts mehr.
+
+    Anlass: Fontainebleau (9 km2) war mit Paris voreingestellt, weil Paris am
+    naechsten liegt. Der Paris-Umriss stammte aus der Fassung von 2013 und war die
+    Agglomeration mit 3.112 km2 — das 337-fache der Brandflaeche. Der Brand war ein
+    Punkt in einer Flaeche, und das ist kein Vergleich mehr.
+    """
+
+    @staticmethod
+    def _quadrat(mitte, seite_grad):
+        """Ein achsenparalleles Quadrat als Ring in (lat, lon), geschlossen."""
+        lat, lon = mitte
+        h = seite_grad / 2
+        return [
+            [lat - h, lon - h],
+            [lat - h, lon + h],
+            [lat + h, lon + h],
+            [lat + h, lon - h],
+            [lat - h, lon - h],
+        ]
+
+    def _stadt(self, slug, mitte, seite_grad):
+        return {"slug": slug, "center": list(mitte), "rings": [self._quadrat(mitte, seite_grad)]}
+
+    def _brand(self, mitte, size_ha):
+        return {"center": list(mitte), "steps": [{"size_ha": size_ha}]}
+
+    def test_naechste_stadt_gewinnt_bei_passender_groesse(self):
+        staedte = [
+            self._stadt("nah", (48.0, 2.0), 0.05),
+            self._stadt("fern", (40.0, -3.0), 0.05),
+        ]
+        brand = self._brand((48.1, 2.1), fetch_ems.city_area_ha(staedte[0]))
+        self.assertEqual(fetch_ems.compare_city(brand, staedte), "nah")
+
+    def test_zu_grosse_nachbarstadt_wird_uebergangen(self):
+        """Der Fall Fontainebleau: die naechste Stadt ist um Groessenordnungen
+        groesser, eine weiter entfernte passt."""
+        gross_nah = self._stadt("gross_nah", (48.0, 2.0), 0.5)
+        klein_fern = self._stadt("klein_fern", (40.0, -3.0), 0.02)
+        brand = self._brand((48.05, 2.05), fetch_ems.city_area_ha(klein_fern))
+
+        verhaeltnis = fetch_ems.city_area_ha(gross_nah) / fetch_ems.city_area_ha(klein_fern)
+        self.assertGreater(verhaeltnis, fetch_ems.MAX_COMPARE_RATIO, "Testaufbau taugt sonst nicht")
+        self.assertEqual(fetch_ems.compare_city(brand, staedte := [gross_nah, klein_fern]), "klein_fern")
+        self.assertTrue(staedte)
+
+    def test_auch_eine_viel_zu_kleine_nachbarstadt_wird_uebergangen(self):
+        """Die Grenze gilt in beide Richtungen — ein Dorf neben einem Grossbrand
+        ist genauso wenig eine Bezugsgroesse."""
+        winzig_nah = self._stadt("winzig_nah", (48.0, 2.0), 0.005)
+        passend_fern = self._stadt("passend_fern", (40.0, -3.0), 0.3)
+        brand = self._brand((48.05, 2.05), fetch_ems.city_area_ha(passend_fern))
+        self.assertEqual(fetch_ems.compare_city(brand, [winzig_nah, passend_fern]), "passend_fern")
+
+    def test_ohne_staedte_kein_vorschlag(self):
+        self.assertIsNone(fetch_ems.compare_city(self._brand((48.0, 2.0), 100.0), []))
+
+    def test_ohne_flaechenangabe_bleibt_es_bei_der_naechsten(self):
+        """Ein Brand ohne Zeitschnitte hat keine Flaeche — dann ist Naehe alles,
+        was zur Verfuegung steht."""
+        staedte = [self._stadt("nah", (48.0, 2.0), 0.05), self._stadt("fern", (40.0, -3.0), 0.05)]
+        brand = {"center": [48.1, 2.1], "steps": []}
+        self.assertEqual(fetch_ems.compare_city(brand, staedte), "nah")
+
+
+class TestVorauswahlImBestand(unittest.TestCase):
+    """Die tatsaechlich gesetzten Vorauswahlen gegen die echten Daten."""
+
+    def setUp(self):
+        roh = (fetch_ems.OUT_FILE).read_text(encoding="utf-8")
+        self.fires = json.loads(roh[roh.index("=") + 1 :].strip().rstrip(";"))
+        self.cities = {c["slug"]: c for c in fetch_ems.load_cities()}
+        if not self.cities:
+            self.skipTest("cities.js nicht lesbar")
+
+    def test_jede_vorauswahl_ist_eine_taugliche_bezugsgroesse(self):
+        for fire in self.fires:
+            slug = fire.get("compare")
+            self.assertIn(slug, self.cities, f"{fire['slug']}: unbekannte Vergleichsstadt {slug!r}")
+
+            brand_ha = fire["steps"][-1]["size_ha"]
+            stadt_ha = fetch_ems.city_area_ha(self.cities[slug])
+            verhaeltnis = max(stadt_ha / brand_ha, brand_ha / stadt_ha)
+            self.assertLessEqual(
+                verhaeltnis,
+                fetch_ems.MAX_COMPARE_RATIO,
+                f"{fire['slug']} ({brand_ha / 100:.0f} km²) ist mit {slug} "
+                f"({stadt_ha / 100:.0f} km²) voreingestellt — das {verhaeltnis:.0f}-fache. "
+                "Kein Größenvergleich mehr.",
+            )
+
+    def test_paris_ist_die_stadt_und_nicht_die_agglomeration(self):
+        """Vier der fünf Städte sind Stadtgebiete. Paris war als einziges die
+        Agglomeration (3.112 km²) und trug trotzdem nur die Beschriftung „Paris"."""
+        if "paris" not in self.cities:
+            self.skipTest("Paris nicht in der Auswahl")
+        km2 = fetch_ems.city_area_ha(self.cities["paris"]) / 100
+        self.assertLess(km2, 300, f"Paris hat {km2:.0f} km² — das ist nicht das Stadtgebiet (105 km²)")
+        self.assertGreater(km2, 50, f"Paris hat nur {km2:.0f} km² — zu klein für das Stadtgebiet")

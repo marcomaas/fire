@@ -54,7 +54,15 @@ MAX_VERTICES_PER_RING = 400
 CITIES = [
     {"slug": "bordeaux", "label": {"de": "Bordeaux", "en": "Bordeaux"}, "query": "Bordeaux, France"},
     {"slug": "madrid", "label": {"de": "Madrid", "en": "Madrid"}, "query": "Madrid, Spain"},
-    {"slug": "paris", "label": {"de": "Paris", "en": "Paris"}, "file": "paris.geojson"},
+    # Aus OpenStreetMap wie Bordeaux und Madrid, nicht mehr aus data/paris.geojson.
+    # Die Datei stammt aus der Fassung von 2013 und enthaelt die Agglomeration:
+    # 68 x 91 km, 3.112 km2, 9,5 Millionen Einwohner laut ihren eigenen
+    # Eigenschaften. Beschriftet war sie schlicht mit "Paris". Wer liest, ein Brand
+    # sei ein Teil von Paris, denkt an die Stadt (105 km2) — und bei Fontainebleau
+    # ergab der Vergleich das 337-fache der Brandflaeche, also gar keinen Vergleich
+    # mehr. Die vier anderen Staedte sind Stadtgebiete; Paris war der einzige
+    # Ausreisser.
+    {"slug": "paris", "label": {"de": "Paris", "en": "Paris"}, "query": "Paris, France"},
     {"slug": "berlin", "label": {"de": "Berlin", "en": "Berlin"}, "file": "berlin.geojson"},
     {"slug": "london", "label": {"de": "London", "en": "London"}, "file": "london.geojson"},
 ]
