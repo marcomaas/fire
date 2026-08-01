@@ -146,6 +146,9 @@ function lade(url, cb) {
 			var z = null;
 			try {
 				z = zustand(f.contentDocument, f.contentWindow);
+				if (!ALLE.length && z.daten) {
+					ALLE = z.daten.map(function (x) { return x.slug; });
+				}
 			} catch (e) {
 				z = { fehler: String(e) };
 			}
@@ -166,7 +169,11 @@ function warteAuf(doc, bedingung, cb, versuche) {
 	setTimeout(function () { warteAuf(doc, bedingung, cb, versuche - 1); }, 100);
 }
 
-var ALLE = ['gironde', 'central-spain', 'biscarrosse', 'artana', 'fontainebleau'];
+/* Die Brandliste kommt aus den Daten, nicht aus dieser Datei. Fest eingetragen
+ * wurde sie mit dem sechsten Brand still falsch, und drei Prüfungen meldeten
+ * einen Fehler, wo keiner war — dieselbe Klasse, die diese Anwendung an einem
+ * halben Dutzend Stellen schon hatte. Gefüllt vom ersten geladenen Rahmen. */
+var ALLE = [];
 
 var FAELLE = [
 	{
@@ -411,8 +418,15 @@ var FAELLE = [
 						'Animation nicht fertig — Anzeige "' + datum + '"');
 					if (!durch) { fertig(); return; }
 
+					/* Das Trennzeichen ist optional: seit die Formatierung über Intl
+					 * läuft, steht im Deutschen ein Komma zwischen Datum und Uhrzeit
+					 * („30.07.2026, 12:47") — die korrekte Form der Sprache. Und das
+					 * Kürzel kommt aus Intl, kann also je nach Umgebung auch als
+					 * Versatz erscheinen (GMT+2). Geprüft wird die Absicht: Datum,
+					 * Uhrzeit, irgendeine Zonenangabe. Welche, prüft der Fall darunter
+					 * gegen Intl selbst. */
 					check('Zeitangabe | nennt Datum, Uhrzeit und Kürzel',
-						/\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}\s+(MEZ|MESZ)$/.test(datum.trim()),
+						/\d{2}\.\d{2}\.\d{4},?\s+\d{2}:\d{2}\s+\S+$/.test(datum.trim()),
 						'Anzeige "' + datum + '"');
 
 					var brand = daten.filter(function (x) { return x.slug === 'artana'; })[0];
@@ -440,9 +454,23 @@ var FAELLE = [
 					var versatz = Math.round(
 						(new Date(new Date(ms).toLocaleString('en-US', { timeZone: brand.timezone })) -
 						 new Date(new Date(ms).toLocaleString('en-US', { timeZone: 'UTC' }))) / 3600000);
-					check('Zeitangabe | Kürzel passt zum Versatz',
-						datum.indexOf(versatz === 1 ? 'MEZ' : 'MESZ') !== -1,
-						'Versatz ' + versatz + ' h, Anzeige "' + datum.trim() + '"');
+					/* Das Kürzel muss zur Zone und zur Jahreszeit passen. Geprüft über
+					 * Intl selbst — ein fest eingetragenes MEZ/MESZ wäre für den ersten
+					 * Brand außerhalb Mitteleuropas wieder falsch, und genau das war der
+					 * Ausgangsfehler. */
+					var erwartetesKuerzel = (function () {
+						var tt = new Intl.DateTimeFormat('de-DE', {
+							timeZone: brand.timezone, timeZoneName: 'short'
+						}).formatToParts(ms);
+						for (var i = 0; i < tt.length; i++) {
+							if (tt[i].type === 'timeZoneName') return tt[i].value;
+						}
+						return '';
+					})();
+					check('Zeitangabe | Kürzel passt zur Zone und Jahreszeit',
+						!!erwartetesKuerzel && datum.indexOf(erwartetesKuerzel) !== -1,
+						'erwartet "' + erwartetesKuerzel + '" (Versatz ' + versatz + ' h), Anzeige "' +
+						datum.trim() + '"');
 					fertig();
 				});
 			};

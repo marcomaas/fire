@@ -14,40 +14,75 @@ $(document).ready(function () {
   var lang = $("html").hasClass("site-de") ? "de" : "en";
 
   /* Die Aufnahmezeitpunkte kommen laut API-Schema in UTC und werden in der
-   * Ortszeit des Brandes gezeigt. Der Versatz stand hier als feste 2 — richtig
-   * fuer die Sommeraufnahmen, aber jede Aufnahme aus dem Winterhalbjahr stuende
-   * damit eine Stunde falsch da, und zwar ohne jeden Hinweis darauf.
+   * Ortszeit des Brandes gezeigt. Die Zone steht je Brand in den Daten (Feld
+   * `timezone`, eine IANA-Angabe wie Europe/Madrid).
    *
-   * Gerechnet wird jetzt je Zeitpunkt aus der Zone des Brandes (Feld `timezone`
-   * in fires.js, eine IANA-Angabe wie Europe/Madrid). Der Umweg ueber
-   * toLocaleString ist noetig, weil moment hier ohne Zeitzonendatenbank
-   * eingebunden ist; Intl bringt die Regeln mit, ohne dass etwas dazukommt. */
-  var FALLBACK_TZ = "Europe/Paris";
+   * Gerechnet und formatiert wird durchgaengig mit Intl. Vorher lief die
+   * Formatierung ueber moment und der Zeitversatz ueber einen Umweg: dasselbe
+   * Datum zweimal als en-US-Text erzeugen, zurueckparsen und die Differenz
+   * bilden. Das funktionierte, war aber eine Rueckparse-Kruecke neben einer
+   * Schnittstelle, die es direkt kann — und moment lag nur noch fuer die
+   * Formatierung im Baum.
+   *
+   * Zwei Dinge, die frueher still falsch waren und jetzt nicht mehr:
+   *   - Bei unbekannter Zone stand ein fester Versatz von zwei Stunden. Jetzt
+   *     wird UTC angezeigt UND als UTC beschriftet — falsch beschriftet ist
+   *     schlimmer als sichtbar unbekannt.
+   *   - Das Kuerzel kannte nur MEZ/MESZ. Jetzt kommt es aus Intl und stimmt
+   *     auch fuer den ersten Brand ausserhalb Mitteleuropas. */
+  var FALLBACK_TZ = "UTC";
 
   function zoneOf(f) {
     return (f && f.timezone) || FALLBACK_TZ;
   }
 
-  function offsetHours(millis, zone) {
-    var d = new Date(millis);
-    try {
-      var alsUTC = new Date(d.toLocaleString("en-US", { timeZone: "UTC" }));
-      var alsOrt = new Date(d.toLocaleString("en-US", { timeZone: zone }));
-      var stunden = Math.round((alsOrt - alsUTC) / 3600000);
-      /* Unplausibles verwerfen statt anzeigen: ein unbekannter Zonenname wirft in
-       * manchen Umgebungen nicht, sondern liefert UTC. */
-      if (stunden >= -12 && stunden <= 14) return stunden;
-    } catch (e) {
-      /* Zonenname unbekannt — unten der Rueckfall. */
+  /* Ein Formatierer je (Zone, Art). Intl.DateTimeFormat ist teuer im Aufbau und
+   * wird hier pro Bild der Animation aufgerufen. */
+  var _formatCache = {};
+
+  function formatter(zone, options) {
+    var key = zone + "|" + JSON.stringify(options);
+    if (!_formatCache[key]) {
+      var locale = lang === "de" ? "de-DE" : "en-GB";
+      try {
+        _formatCache[key] = new Intl.DateTimeFormat(
+          locale,
+          $.extend({ timeZone: zone }, options),
+        );
+      } catch (e) {
+        /* Unbekannte Zone: Intl wirft. Auf UTC zurueckfallen — und der Aufrufer
+         * beschriftet es auch so, siehe zoneLabel(). */
+        _formatCache[key] = new Intl.DateTimeFormat(
+          locale,
+          $.extend({ timeZone: "UTC" }, options),
+        );
+      }
     }
-    return 2;
+    return _formatCache[key];
   }
 
-  /* Kuerzel passend zum tatsaechlichen Versatz. Frankreich und Spanien teilen
-   * dieselbe Zone; kaeme ein Brand aus einer anderen, muesste das hier mit. */
-  function zoneLabel(stunden) {
-    if (lang === "de") return stunden === 1 ? "MEZ" : "MESZ";
-    return stunden === 1 ? "CET" : "CEST";
+  function zoneKnown(zone) {
+    try {
+      new Intl.DateTimeFormat("en-GB", { timeZone: zone });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /* Das Kuerzel der Zone zum jeweiligen Zeitpunkt — im Sommer ein anderes als im
+   * Winter. Intl liefert es je nach Sprache als "MESZ" oder "CEST"; wo es nur
+   * einen Versatz kennt ("GMT+2"), bleibt dieser stehen. Beides ist richtig,
+   * beides ist nachpruefbar — anders als eine fest eingetragene Abkuerzung. */
+  function zoneLabel(millis, zone) {
+    if (!zoneKnown(zone)) return "UTC";
+    var teile = formatter(zone, { timeZoneName: "short" }).formatToParts(
+      new Date(millis),
+    );
+    for (var i = 0; i < teile.length; i++) {
+      if (teile[i].type === "timeZoneName") return teile[i].value;
+    }
+    return "";
   }
 
   /* ---------- Auswahl der gezeigten Braende ---------- */
@@ -133,7 +168,16 @@ $(document).ready(function () {
 
   var text = {
     de: {
-      dateFormat: "DD.MM.YYYY HH:mm",
+      /* Intl-Angaben statt moment-Muster: dieselbe Ausgabe (01.08.2026 14:05),
+       * nur ohne die Bibliothek. */
+      dateParts: {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      },
       size: function (ha) {
         return num(ha / 100, 2) + " km² (" + num(ha, 0) + " ha)";
       },
@@ -155,7 +199,7 @@ $(document).ready(function () {
       fullApp: "alle Brände",
       outbreak: "Brandausbruch",
       acquisition: "Satellitenaufnahme",
-      dayShort: "DD.MM.",
+      dayParts: { day: "2-digit", month: "2-digit" },
       /* Nennt zuerst das Ausbruchsdatum, dann den Verzug bis zur ersten
        * Aufnahme, dann den kartierten Zeitraum — "wann war der Brand" ist die
        * erste Frage, die der Zeitstrahl beantworten soll. */
@@ -207,7 +251,14 @@ $(document).ready(function () {
       },
     },
     en: {
-      dateFormat: "YYYY-MM-DD HH:mm",
+      dateParts: {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      },
       size: function (ha) {
         return num(ha * 0.00386102, 2) + " sq mi (" + num(ha, 0) + " ha)";
       },
@@ -230,7 +281,7 @@ $(document).ready(function () {
       fullApp: "all fires",
       outbreak: "Fire outbreak",
       acquisition: "Satellite acquisition",
-      dayShort: "MMM D",
+      dayParts: { day: "2-digit", month: "short" },
       summary: function (outbreakText, delayText, mappedText) {
         return (
           "Outbreak " +
@@ -275,24 +326,25 @@ $(document).ready(function () {
     },
   }[lang];
 
-  function formatTime(millis) {
-    var stunden = offsetHours(millis, zoneOf(fire));
-    return (
-      moment.utc(millis).add(stunden, "hours").format(text.dateFormat) +
-      " " +
-      zoneLabel(stunden)
-    );
+  /* Zone als Parameter, nicht aus der globalen Variablen `fire`. Vorher las
+   * formatTime sie dort — wer einen Zeitstempel von Brand A formatierte, nachdem
+   * auf B umgeschaltet war, bekam still die Zone von B. Geschuetzt hat allein die
+   * Aufrufreihenfolge. */
+  function formatTime(millis, zone) {
+    zone = zone || zoneOf(fire);
+    var datum = formatter(zone, text.dateParts).format(new Date(millis));
+    var kuerzel = zoneLabel(millis, zone);
+    return kuerzel ? datum + " " + kuerzel : datum;
   }
 
+  /* Die Aufnahmezeitpunkte stehen ohne Zonenangabe in den Daten und sind laut
+   * API-Schema UTC. Date.parse verlangt dafuer das Z. */
   function at(iso) {
-    return moment.utc(iso).valueOf();
+    return Date.parse(/[Zz]|[+-]\d{2}:?\d{2}$/.test(iso) ? iso : iso + "Z");
   }
 
-  function formatDay(millis) {
-    return moment
-      .utc(millis)
-      .add(offsetHours(millis, zoneOf(fire)), "hours")
-      .format(text.dayShort);
+  function formatDay(millis, zone) {
+    return formatter(zone || zoneOf(fire), text.dayParts).format(new Date(millis));
   }
 
   /* Zeitspanne in Worten. Unter zwei Tagen in Stunden, weil "1 Tag" bei 39

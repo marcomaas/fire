@@ -129,6 +129,25 @@ MIN_FRAGMENT_HA = 5.0  # Streufeuer unterhalb dieser Groesse verrauschen den Umr
 MAX_OTHER_PARTS = 250  # weitere gezeichnete Teilflaechen neben der groessten
 OTHER_VERTICES = 48
 
+# Nachkommastellen der ausgegebenen Koordinaten. Vier sind rund elf Meter am
+# Aequator — deutlich feiner als die Vereinfachungstoleranz von etwa 30 Metern,
+# mit der die Umrisse ohnehin geglaettet werden, und feiner als ein Bildpunkt bei
+# der hoechsten zugelassenen Zoomstufe. Die fuenfte Stelle (rund ein Meter) war
+# also nie sichtbar, kostete aber bei 84.429 Koordinaten spuerbar Datei.
+COORD_DECIMALS = 4
+
+# Stuetzpunkte je Nebenflaeche, nach ihrer Groesse. Vorher bekam jede 48 — auch
+# eine von fuenf Hektar, die bei den gezeigten Zoomstufen etwa fuenf Bildpunkte
+# breit ist. 48 Stuetzpunkte auf fuenf Bildpunkten sind nicht zu sehen, kosten
+# aber dasselbe wie bei der groessten Flaeche.
+#
+# Eine Flaechenschwelle waere der naheliegende Hebel gewesen und ist verworfen
+# worden: gemessen am 01.08.2026 ist die kleinste Nebenflaeche im Bestand 4,7 ha
+# gross, weil MIN_FRAGMENT_HA bereits bei 5 ha filtert. Es gibt keine Winzlinge
+# zu entfernen — wer hier eine Schwelle einzieht, entfernt Sichtbares.
+OTHER_VERTICES_MIN = 12
+OTHER_VERTICES_FULL_HA = 500.0  # ab dieser Groesse die volle Stuetzpunktzahl
+
 # Ab diesem Anteil der groessten Teilflaeche an der Gesamtflaeche traegt eine
 # Morphing-Animation die Aussage. Darunter verteilt sich das Feuer auf viele
 # getrennte Flecken - dann waere ein Ueberblenden des groessten Umrisses
@@ -205,6 +224,20 @@ def polygon_area_ha(geom):
         for hole in poly.interiors:
             total -= ring_area_m2(list(hole.coords))
     return total / 10000.0
+
+
+def vertices_for(area_ha):
+    """Stuetzpunkte fuer eine Nebenflaeche, nach ihrer Groesse.
+
+    Linear zwischen OTHER_VERTICES_MIN und OTHER_VERTICES, voll ab
+    OTHER_VERTICES_FULL_HA. Eine Flaeche von fuenf Hektar ist bei den gezeigten
+    Zoomstufen wenige Bildpunkte breit; ihr Umriss braucht keine 48 Punkte, und
+    bei ueber tausend solchen Flaechen macht das den Grossteil der Datei aus.
+    """
+    if area_ha >= OTHER_VERTICES_FULL_HA:
+        return OTHER_VERTICES
+    anteil = max(0.0, area_ha) / OTHER_VERTICES_FULL_HA
+    return int(round(OTHER_VERTICES_MIN + anteil * (OTHER_VERTICES - OTHER_VERTICES_MIN)))
 
 
 def resample_ring(coords, count):
@@ -347,7 +380,7 @@ def outline(geojson):
     ring_lonlat = resample_ring(exterior, MAX_VERTICES)
 
     # Leaflet erwartet die Reihenfolge Breite, Laenge - GeoJSON liefert sie umgekehrt.
-    ring = [[round(lat, 5), round(lon, 5)] for lon, lat in ring_lonlat]
+    ring = [[round(lat, COORD_DECIMALS), round(lon, COORD_DECIMALS)] for lon, lat in ring_lonlat]
 
     # Die uebrigen Teilflaechen werden nicht ueberblendet, aber mitgezeichnet,
     # damit Flaechenangabe und Bild zusammenpassen. Bei stark zerstreuten
@@ -360,13 +393,16 @@ def outline(geojson):
             dropped_ha += polygon_area_ha(part)
             dropped_count += 1
             continue
+        teil_ha = polygon_area_ha(part)
         simple = part.simplify(SIMPLIFY_TOLERANCE, preserve_topology=True)
         if simple.is_empty:
             simple = part
         if simple.geom_type == "MultiPolygon":
             simple = max(simple.geoms, key=polygon_area_ha)
-        coords = resample_ring(list(simple.exterior.coords), OTHER_VERTICES)
-        others.append([[round(lat, 5), round(lon, 5)] for lon, lat in coords])
+        coords = resample_ring(list(simple.exterior.coords), vertices_for(teil_ha))
+        others.append(
+            [[round(lat, COORD_DECIMALS), round(lon, COORD_DECIMALS)] for lon, lat in coords]
+        )
 
     largest_ha = polygon_area_ha(largest)
     centroid = largest.centroid
@@ -708,6 +744,45 @@ def annotate_compare(fires):
             print(f"   Vergleich voreingestellt: {fire['slug']:14s} -> {slug}", flush=True)
 
 
+def slim_fires(fires):
+    """Wendet Genauigkeit und Stuetzpunktzahl auf einen vorhandenen Bestand an.
+
+    Ohne Netz. Gedacht fuer den Fall, dass sich die Ausgaberegeln aendern, die
+    Daten aber nicht: ein voller Lauf laedt dafuer 27 Produkte von bis zu 59 MB
+    erneut herunter, und der Dienst weist bei zu vielen Abrufen ab.
+
+    Es wird nichts weggelassen — jede Nebenflaeche bleibt, nur mit weniger
+    Stuetzpunkten, wenn sie klein ist. Die Flaechenangabe aendert sich dadurch
+    nicht, das Bild bei den gezeigten Zoomstufen ebenso wenig.
+
+    Gibt (Braende, Bericht) zurueck.
+    """
+    vorher_punkte = 0
+    nachher_punkte = 0
+    for fire in fires:
+        for step in fire.get("steps", []):
+            step["polygon"] = [
+                [round(lat, COORD_DECIMALS), round(lon, COORD_DECIMALS)]
+                for lat, lon in step["polygon"]
+            ]
+
+            neue_others = []
+            for ring in step.get("others", []):
+                vorher_punkte += len(ring)
+                # ring_area_m2 erwartet (lon, lat) — gespeichert ist (lat, lon).
+                lonlat = [(lon, lat) for lat, lon in ring]
+                flaeche_ha = ring_area_m2(lonlat) / 10000.0
+                ziel = vertices_for(flaeche_ha)
+                if ziel < len(ring):
+                    lonlat = resample_ring(lonlat, ziel)
+                nachher_punkte += len(lonlat)
+                neue_others.append(
+                    [[round(lat, COORD_DECIMALS), round(lon, COORD_DECIMALS)] for lon, lat in lonlat]
+                )
+            step["others"] = neue_others
+    return fires, {"vorher": vorher_punkte, "nachher": nachher_punkte}
+
+
 def write_fires(fires):
     OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     OUT_FILE.write_text(
@@ -790,6 +865,27 @@ def main():
     # wenn sich die Staedteliste aendert: dann steht in den Braenden eine
     # Vergleichsstadt, die es nicht mehr gibt, und ein voller Lauf laedt dafuer
     # bis zu 59 MB je Produkt erneut herunter.
+    if "--slim" in args:
+        bestand = load_existing()
+        if not bestand:
+            print("Kein Bestand in fires.js - nichts zu tun.", file=sys.stderr)
+            return 1
+        vorher = OUT_FILE.stat().st_size
+        order = [c["slug"] for c in FIRES]
+        fires = [bestand[s] for s in order if s in bestand]
+        fires += [f for s, f in bestand.items() if s not in order]
+        fires, bericht = slim_fires(fires)
+        write_fires(fires)
+        nachher = OUT_FILE.stat().st_size
+        print(
+            f"Stützpunkte der Nebenflächen: {bericht['vorher']:,} → {bericht['nachher']:,}".replace(",", ".")
+        )
+        print(
+            f"{OUT_FILE.relative_to(ROOT)}: {vorher / 1024:.0f} KB → {nachher / 1024:.0f} KB "
+            f"({(1 - nachher / vorher) * 100:.0f} % kleiner)"
+        )
+        return 0
+
     if compare_only:
         bestand = load_existing()
         if not bestand:

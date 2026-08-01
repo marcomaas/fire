@@ -553,8 +553,14 @@ nav#nav a:hover {
 	 * Kante. 60 Prozent tragen fuenf Eintraege vollstaendig und lassen der
 	 * Staedteliste immer noch mehr als zwei Zeilen. Waechst die Liste weiter,
 	 * scrollt sie mit Anzeige — und die Layout-Pruefung ab 500 Pixel Hoehe wird
-	 * rot, damit die Entscheidung nicht stillschweigend faellt. */
-	max-height: 60%;
+	 * rot, damit die Entscheidung nicht stillschweigend faellt.
+	 *
+	 * Genau das ist am 01.08.2026 passiert: mit dem sechsten Brand (La Mierla)
+	 * fiel bei 360x640 einer heraus, um zwei Pixel. 65 Prozent traegt sechs
+	 * Eintraege und laesst der Staedteliste weiterhin mehr als zwei Zeilen. Beim
+	 * siebten wird die Pruefung wieder rot — dann ist es keine Deckelfrage mehr,
+	 * sondern eine redaktionelle. */
+	max-height: 65%;
 }
 
 #map-compare {
