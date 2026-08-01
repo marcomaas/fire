@@ -562,6 +562,77 @@ if __name__ == "__main__":
     unittest.main(verbosity=2)
 
 
+class TestProjektdokumente(unittest.TestCase):
+    """Die Lizenzprüfung fasste nur das Repository — die Deliverables liegen woanders.
+
+    Am 01.08.2026 stand „Anwendung CC BY 3.0" noch in zwei Dokumenten unter
+    `claude mm/projekte/odc-wildfire/`, darunter im Entwurf für einen
+    LinkedIn-Beitrag. Wäre er so herausgegangen, hätte eine falsche Lizenzangabe
+    die Runde gemacht — und zwar nachdem dieselbe Angabe in der Anwendung schon
+    korrigiert war. Die Prüfung im Repo konnte das nicht sehen: sie kennt nur
+    Dateien unterhalb des Repos.
+
+    Übersprungen, wenn der Dropbox-Ordner nicht erreichbar ist (anderes Gerät,
+    CI-Läufer) — eine Prüfung, die dort hart fehlschlägt, würde nur abgeschaltet.
+    """
+
+    PROJEKT = (
+        Path.home()
+        / "Datenfreunde Dropbox/Marco Maas/claude mm/projekte/odc-wildfire"
+    )
+
+    def _dokumente(self):
+        if not self.PROJEKT.is_dir():
+            self.skipTest(f"Projektordner nicht erreichbar: {self.PROJEKT}")
+        return sorted(self.PROJEKT.rglob("*.md"))
+
+    def test_kein_dokument_nennt_eine_cc_lizenz_fuer_die_anwendung(self):
+        """Gesucht wird die Aussage, nicht das Kürzel: die Dokumente dürfen den
+        früheren Fehler beschreiben, sie dürfen ihn nur nicht behaupten."""
+        muster = re.compile(
+            r"(Anwendung|Grafik|Code|Programmcode)[^.\n]{0,40}(steht )?unter CC[ -]?BY",
+            re.IGNORECASE,
+        )
+        for pfad in self._dokumente():
+            for zeile_nr, zeile in enumerate(
+                pfad.read_text(encoding="utf-8").splitlines(), start=1
+            ):
+                if muster.search(zeile):
+                    self.fail(
+                        f"{pfad.name}:{zeile_nr} behauptet eine CC-Lizenz für die "
+                        f"Anwendung — der Code steht unter MIT: {zeile.strip()[:100]}"
+                    )
+
+    # Dokumente, die auf den AKTUELLEN Stand zeigen. BACKLOG und Session-Logs sind
+    # Historie: dass dort eine abgelöste Adresse steht, ist richtig so.
+    WEGWEISER = ("CLAUDE.md", "Projektfortschritt.md", "_grundlage/working_brief.md")
+
+    def test_die_wegweiser_nennen_die_aktuelle_adresse(self):
+        """Am 01.08.2026 zeigten alle drei noch auf `waldbraende-datenfreunde.
+        vercel.app` — eine Zwischenadresse aus dem Juli. Wer das Projekt öffnet,
+        landet damit am falschen Ort, und eine künftige Session zitiert es weiter."""
+        if not self.PROJEKT.is_dir():
+            self.skipTest(f"Projektordner nicht erreichbar: {self.PROJEKT}")
+
+        for name in self.WEGWEISER:
+            pfad = self.PROJEKT / name
+            if not pfad.is_file():
+                continue
+            text = pfad.read_text(encoding="utf-8")
+            for veraltet in ("waldbraende.vercel.app", "waldbraende-datenfreunde.vercel.app"):
+                self.assertNotIn(
+                    veraltet,
+                    text,
+                    f"{name} nennt die abgelöste Adresse {veraltet} — aktuell ist "
+                    "apps.datenfreunde.com",
+                )
+            self.assertIn(
+                "apps.datenfreunde.com",
+                text,
+                f"{name} nennt die Live-Adresse gar nicht",
+            )
+
+
 class TestVorschaubild(unittest.TestCase):
     """Das Bild, das bei jedem geteilten Link erscheint.
 

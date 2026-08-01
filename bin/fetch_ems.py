@@ -89,6 +89,28 @@ FIRES = [
         "region_en": "Seine-et-Marne, south-east of Paris",
         "timezone": "Europe/Paris",
     },
+    {
+        # Fuenf Zeitschnitte ueber sechs Tage, Kartierung abgeschlossen — die
+        # reichhaltigste Serie im Bestand. Stand seit dem Suchlauf vom 28.07.2026
+        # auf der Kandidatenliste und wurde damals bewusst nicht aufgenommen: vier
+        # Eintraege im Auswahlblock waren ueberschaubar, und die Sorge war, dass
+        # eine wachsende Liste die Aussage verwaessert.
+        #
+        # Am 01.08.2026 nachgemessen statt weiter vermutet: ein sechster Eintrag
+        # kostet bei 960x540 einen sichtbaren Eintrag in der Staedteliste (5 von 6
+        # statt 6 von 6) und bei 360x640 einen Brand — beides mit Hinweiszeile, also
+        # sichtbar und nicht still. Dafuer kommt die dichteste Aufnahmefolge dazu,
+        # und sie ist abgeschlossen: die Animation erzaehlt eine ganze Geschichte
+        # statt eines Zwischenstands.
+        "slug": "la-mierla",
+        "activation": "EMSR898",
+        "aoi": 1,
+        "name_de": "La Mierla, Spanien",
+        "name_en": "La Mierla, Spain",
+        "region_de": "Sierra Norte, Provinz Guadalajara",
+        "region_en": "Sierra Norte, Guadalajara province",
+        "timezone": "Europe/Madrid",
+    },
 ]
 
 # Beobachtet, aber noch nicht aufgenommen: EMSR906 "Wildfires in Province of
