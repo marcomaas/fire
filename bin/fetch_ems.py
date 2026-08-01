@@ -32,6 +32,15 @@ CITIES_FILE = ROOT / "app" / "assets" / "data" / "cities.js"
 # Welche Braende dargestellt werden. Ein Eintrag entspricht einer Area of
 # Interest innerhalb einer EMS-Aktivierung, denn eine Aktivierung kann mehrere
 # raeumlich getrennte Braende umfassen.
+#
+# name_short ist die Fassung fuer die Auswahlliste in schmalen Rahmen. Bei 132
+# Pixel Listenbreite brechen fuenf von sechs vollen Namen auf zwei Zeilen, und die
+# Liste passt dann je nach Schriftmetrik nicht mehr in ihren Kasten — auf dem
+# CI-Laeufer fiel dadurch ein Brand heraus, lokal nicht. Das Land ist in dieser
+# Liste ohnehin redundant: die Anwendung heisst "Waldbraende in Frankreich und
+# Spanien", und die Region steht unter der Karte. Ausdruecklich als Feld und nicht
+# aus dem Namen geschnitten — ein "alles vor dem letzten Komma" waere eine stille
+# Annahme ueber die Schreibweise kuenftiger Eintraege.
 FIRES = [
     {
         "slug": "gironde",
@@ -39,6 +48,8 @@ FIRES = [
         "aoi": 1,
         "name_de": "Gironde, Frankreich",
         "name_en": "Gironde, France",
+        "name_short_de": "Gironde",
+        "name_short_en": "Gironde",
         "region_de": "Saumos und Le Porge, westlich von Bordeaux",
         "region_en": "Saumos and Le Porge, west of Bordeaux",
         # IANA-Zone, nicht die Abkuerzung: "CEST" gilt nur im Sommerhalbjahr. Die
@@ -52,6 +63,8 @@ FIRES = [
         "aoi": 3,
         "name_de": "La Atalaya, Spanien",
         "name_en": "La Atalaya, Spain",
+        "name_short_de": "La Atalaya",
+        "name_short_en": "La Atalaya",
         "region_de": "Zentralspanien, westlich von Madrid",
         "region_en": "Central Spain, west of Madrid",
         "timezone": "Europe/Madrid",
@@ -62,6 +75,8 @@ FIRES = [
         "aoi": 1,
         "name_de": "Biscarrosse, Frankreich",
         "name_en": "Biscarrosse, France",
+        "name_short_de": "Biscarrosse",
+        "name_short_en": "Biscarrosse",
         "region_de": "Landes, südwestliche Atlantikküste",
         "region_en": "Landes, south-western Atlantic coast",
         "timezone": "Europe/Paris",
@@ -72,6 +87,8 @@ FIRES = [
         "aoi": 1,
         "name_de": "Artana, Spanien",
         "name_en": "Artana, Spain",
+        "name_short_de": "Artana",
+        "name_short_en": "Artana",
         "region_de": "Plana Baixa, Provinz Castellón, nördlich von Valencia",
         "region_en": "Plana Baixa, Castellón province, north of Valencia",
         "timezone": "Europe/Madrid",
@@ -85,6 +102,8 @@ FIRES = [
         "aoi": 1,
         "name_de": "Fontainebleau, Frankreich",
         "name_en": "Fontainebleau, France",
+        "name_short_de": "Fontainebleau",
+        "name_short_en": "Fontainebleau",
         "region_de": "Seine-et-Marne, südöstlich von Paris",
         "region_en": "Seine-et-Marne, south-east of Paris",
         "timezone": "Europe/Paris",
@@ -107,6 +126,8 @@ FIRES = [
         "aoi": 1,
         "name_de": "La Mierla, Spanien",
         "name_en": "La Mierla, Spain",
+        "name_short_de": "La Mierla",
+        "name_short_en": "La Mierla",
         "region_de": "Sierra Norte, Provinz Guadalajara",
         "region_en": "Sierra Norte, Guadalajara province",
         "timezone": "Europe/Madrid",
@@ -548,6 +569,10 @@ def build_fire(config):
         "aoi": config["aoi"],
         "mode": mode,
         "name": {"de": config["name_de"], "en": config["name_en"]},
+        "name_short": {
+            "de": config.get("name_short_de") or config["name_de"],
+            "en": config.get("name_short_en") or config["name_en"],
+        },
         "region": {"de": config["region_de"], "en": config["region_en"]},
         "timezone": config["timezone"],
         "event_time": activation.get("eventTime"),
@@ -772,6 +797,24 @@ def annotate_compare(fires):
             print(f"   Vergleich voreingestellt: {fire['slug']:14s} -> {slug}", flush=True)
 
 
+def annotate_short_names(fires):
+    """Traegt name_short aus der Konfiguration in einen vorhandenen Bestand nach.
+
+    Ohne Netz, damit eine reine Beschriftungsaenderung nicht 27 Produkte von bis
+    zu 59 MB erneut herunterlaedt.
+    """
+    nach_slug = {c["slug"]: c for c in FIRES}
+    for fire in fires:
+        config = nach_slug.get(fire["slug"])
+        if not config:
+            continue
+        fire["name_short"] = {
+            "de": config.get("name_short_de") or fire["name"]["de"],
+            "en": config.get("name_short_en") or fire["name"]["en"],
+        }
+    return fires
+
+
 def slim_fires(fires):
     """Wendet Genauigkeit und Stuetzpunktzahl auf einen vorhandenen Bestand an.
 
@@ -902,6 +945,7 @@ def main():
         order = [c["slug"] for c in FIRES]
         fires = [bestand[s] for s in order if s in bestand]
         fires += [f for s, f in bestand.items() if s not in order]
+        fires = annotate_short_names(fires)
         fires, bericht = slim_fires(fires)
         write_fires(fires)
         nachher = OUT_FILE.stat().st_size

@@ -1335,11 +1335,19 @@ $(document).ready(function () {
   function buildFireButtons() {
     var list = $("#map-fires ul").empty();
     visibleFires().forEach(function (item) {
+      /* Kurzname in der Liste, voller Name überall sonst. Bei 132 Pixel
+       * Listenbreite brechen die vollen Namen auf zwei Zeilen, und die Liste
+       * passt dann je nach Schriftmetrik nicht mehr in ihren Kasten — auf dem
+       * CI-Läufer fiel dadurch ein Brand heraus, lokal nicht. Das title-Attribut
+       * trägt den vollen Namen weiter, und unter der Karte steht ohnehin die
+       * Region. */
+      var kurz = (item.name_short && item.name_short[lang]) || item.name[lang] || item.name.de;
+      var voll = item.name[lang] || item.name.de;
       $("<li>")
         .append(
           $("<a>")
-            .attr({ href: "javascript:;", "data-fire": item.slug })
-            .text(item.name[lang] || item.name.de),
+            .attr({ href: "javascript:;", "data-fire": item.slug, title: voll })
+            .text(kurz),
         )
         .appendTo(list);
     });
