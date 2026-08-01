@@ -937,7 +937,7 @@ $(document).ready(function () {
 
     /* Fuellung aus, solange gemorpht wird. finish() stellt sie fuer den Endstand
      * wieder her — dort ist der Umriss eine Messung und keine Zwischenform. */
-    firePoly.setStyle(firePolyStyle);
+    firePoly.setStyle(morphOutlineStyle);
 
     function morphStep() {
       var from = fire.steps[index];

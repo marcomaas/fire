@@ -90,6 +90,8 @@ function pruefe(fall, fertig) {
 		var schrumpfungen = 0;
 		var groessterRueckgang = 0;
 		var schrumpfWann = '';
+		var morphOhneFuellung = true;
+		var morphGesehen = false;
 
 		function roteFlaechen() {
 			var raus = [];
@@ -171,6 +173,18 @@ function pruefe(fall, fertig) {
 				return;
 			}
 
+			/* Solange abgespielt wird: der Umriss der laufenden Überblendung ist der
+			 * Pfad von firePoly. Leaflet schreibt fill="none", wenn fill:false
+			 * gesetzt ist. */
+			if (d.getElementById('map-container').classList.contains('playing')) {
+				var vordergrund = d.querySelector('.leaflet-overlay-pane path[stroke="#8A0B0B"]');
+				if (vordergrund) {
+					morphGesehen = true;
+					var f2 = (vordergrund.getAttribute('fill') || '').toLowerCase();
+					if (f2 !== 'none') morphOhneFuellung = false;
+				}
+			}
+
 			var drin = 0;
 			for (var i = 0; i < punkte.length; i++) {
 				if (istRot(punkte[i][0], punkte[i][1], pfade)) drin++;
@@ -225,6 +239,23 @@ function pruefe(fall, fertig) {
 				!!punkte && punkte.length >= 50,
 				punkte ? punkte.length + ' Prüfpunkte' : 'keine rote Fläche gefunden');
 			check(tag + ' | Animation lief', proben >= 20, proben + ' Proben');
+
+			/* Und der Mechanismus selbst, direkt geprüft: der wandernde Umriss darf
+			 * während der Überblendung keine Füllung tragen.
+			 *
+			 * Diese Prüfung ist da, weil die beiden Flächenprüfungen darüber den
+			 * eigentlichen Fehler NICHT gesehen haben. Er war kein Flächenverlust,
+			 * sondern ein Helligkeitssprung: zwei halbdurchsichtige Rot übereinander
+			 * ergeben 0,89, eines allein 0,75. Punkt-in-Fläche und Überdeckung
+			 * blieben dabei unverändert; sichtbar war es trotzdem, und Marco hat es
+			 * in der laufenden Anwendung gemeldet. Was eine geometrische Prüfung
+			 * nicht messen kann, muss sie an der Ursache festhalten. */
+			if (fall.modus === 'morph') {
+				check(tag + ' | Überblend-Umriss trägt keine Füllung',
+					morphOhneFuellung,
+					'der wandernde Umriss war gefüllt — zwei halbdurchsichtige Rot ' +
+					'übereinander lassen die Fläche beim Zurückweichen aufhellen');
+			}
 
 			check(tag + ' | rote Fläche wird zwischen zwei Bildern nie schwächer',
 				schrumpfungen === 0,
