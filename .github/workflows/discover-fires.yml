@@ -2,9 +2,10 @@
 # als GitHub-Issue.
 #
 # Bewusst kein automatisches Eintragen: welcher Brand dargestellt wird, ist eine
-# redaktionelle Entscheidung. Die Grafik zeigt vier Brände nebeneinander — jeder
-# weitere kostet Aufmerksamkeit, und ein automatisch wachsender Auswahlblock
-# würde die Aussage verwässern. Der Lauf liefert deshalb einen fertigen
+# redaktionelle Entscheidung. Jeder weitere Eintrag kostet Aufmerksamkeit, und ein
+# automatisch wachsender Auswahlblock würde die Aussage verwässern. Wie teuer ein
+# Eintrag ist, lässt sich messen: der sechste (La Mierla, 01.08.2026) kostete bei
+# 960×540 einen sichtbaren Eintrag in der Städteliste. Der Lauf liefert deshalb einen fertigen
 # Konfigurationsblock zum Einfügen, trifft die Auswahl aber nicht selbst.
 #
 # Die Suche muss den EMSR-Nummernraum abtasten, weil die API keine
