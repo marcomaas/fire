@@ -73,7 +73,20 @@ function farben(doc) {
 			deckkraft: parseFloat(pfad.getAttribute('fill-opacity') || '1')
 		};
 	};
-	var brand = lies(doc.querySelector('.leaflet-overlay-pane path[fill="#BE1313"]'));
+	/* Die kräftigste rote Fläche, nicht die erste im Dokument. Es gibt mehrere:
+	 * die erreichten Stände in voller Deckkraft und die Nebenflächen mit 0,45.
+	 * Welche zuerst im Dokument steht, hängt an der Zeichenreihenfolge — die
+	 * Prüfung maß nach einer Änderung an der Animation plötzlich eine Nebenfläche
+	 * und meldete einen Fehler, wo keiner war. Gemeint ist die Fläche, die das
+	 * Bild trägt. */
+	var brand = (function () {
+		var beste = null;
+		doc.querySelectorAll('.leaflet-overlay-pane path[fill="#BE1313"]').forEach(function (pfad) {
+			var gelesen = lies(pfad);
+			if (gelesen && (!beste || gelesen.deckkraft > beste.deckkraft)) beste = gelesen;
+		});
+		return beste;
+	})();
 	var stadt = lies(doc.querySelector('.leaflet-overlay-pane path[fill="#FFFFFF"]'));
 	if (!brand || !stadt) {
 		return { brand: brand, stadt: stadt, saettigung: 0, ergebnis: '', stadtDeckkraft: stadt ? stadt.deckkraft : null };

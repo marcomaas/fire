@@ -555,7 +555,27 @@ $(document).ready(function () {
    * footprintLayer(), das die Farbe aus otherPolyStyle nimmt. Ein zweites
    * fillColor daneben wäre wirkungslos — beim Mutationstest hat genau das eine
    * Ruecknahme vorgetaeuscht, die nichts veraendert hat. */
-  var REACHED_FILL_OPACITY = 0.55;
+  /* Erreichter Stand in derselben Deckkraft wie die Brandflaeche. Ein
+   * schwaecherer Wert war der sichtbare Teil des Problems: bei 0,55 unter einem
+   * aktuellen Umriss mit 0,75 ergibt die Ueberlagerung 0,89 — und wo der Umriss
+   * zurueckwich, sprang die Helligkeit von 0,89 auf 0,55. Das las sich als
+   * Schrumpfen, obwohl die Flaeche rot blieb. */
+  var REACHED_FILL_OPACITY = 0.75;
+
+  /* Waehrend der Ueberblendung traegt der wandernde Umriss KEINE Fuellung, nur
+   * seine Linie. Sonst stapeln sich zwei halbdurchsichtige Rot uebereinander, und
+   * jede Bewegung aendert die Helligkeit — nach vorne dunkler, nach hinten
+   * heller. Die rote Flaeche ist damit ausschliesslich die Summe der erreichten
+   * Staende: sie waechst in Stufen, wie die Daten, und kann nicht schrumpfen.
+   * Der Umriss zeigt weiter, wie sich die Grenze zwischen zwei Aufnahmen
+   * rechnerisch entwickelt — als Linie, die keine Flaeche behauptet. */
+  var morphOutlineStyle = {
+    stroke: true,
+    color: "#8A0B0B",
+    opacity: 0.9,
+    weight: 2,
+    fill: false,
+  };
 
   /* Der Stadtumriss liegt ueber der Brandflaeche. Bei 0,35 Deckkraft zog das
    * weisse Fuellen der roten Flaeche die Farbe, gerade in der Schnittmenge - und
@@ -819,6 +839,9 @@ $(document).ready(function () {
   }
 
   function finish(redrawLast) {
+    /* Der Endstand ist eine Messung, keine Zwischenform — er bekommt seine
+     * Flaeche zurueck. */
+    firePoly.setStyle(firePolyStyle);
     if (redrawLast) showStep(fire.steps[fire.steps.length - 1]);
     setPlayhead(at(fire.steps[fire.steps.length - 1].acquired));
     playing = false;
@@ -911,6 +934,10 @@ $(document).ready(function () {
     var index = 0;
 
     showStep(fire.steps[0]);
+
+    /* Fuellung aus, solange gemorpht wird. finish() stellt sie fuer den Endstand
+     * wieder her — dort ist der Umriss eine Messung und keine Zwischenform. */
+    firePoly.setStyle(morphOutlineStyle);
 
     function morphStep() {
       var from = fire.steps[index];
