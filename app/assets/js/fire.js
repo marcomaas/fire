@@ -1326,7 +1326,7 @@ $(document).ready(function () {
      *
      * Ohne diese Zeile stand vor dem Eintrag ein Viereck ohne Bedeutung. Die
      * Erklärung steckte allein im title-Attribut, also im Hover — auf einem
-     * Touchscreen nirgends. Marco hat am 31.07.2026 gefragt, was es bedeutet. */
+     * Touchscreen nirgends. Aufgefallen am 31.07.2026 beim Ansehen der Anwendung. */
     var sichtbar =
       eintrag.length > 0 && legende.closest("#map-compare").is(":visible");
     legende.prop("hidden", !sichtbar).text(sichtbar ? text.nearestLegend : "");

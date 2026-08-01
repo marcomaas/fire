@@ -327,3 +327,72 @@ class TestKonfiguration(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestUmlaufrichtung(unittest.TestCase):
+    """orient_ring() bringt jeden Ring in dieselbe Umlaufrichtung.
+
+    Der Ueberblend-Algorithmus von 2013 setzt das voraus — `rotate` sucht ein
+    Startpaar, `resample` richtet die Folgen monoton aneinander aus. Laufen zwei
+    Umrisse gegeneinander, ordnet das Alignment gegenueberliegende Seiten
+    einander zu, und die Zwischenformen sind nicht mehr ungenau, sondern grotesk.
+    Erzwungen wurde die Richtung bis zum 01.08.2026 nirgends.
+    """
+
+    # Ein Quadrat, gegen den Uhrzeigersinn (x rechts, y oben), geschlossen.
+    GEGEN_UHR = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0), (0.0, 0.0)]
+
+    def test_gegen_den_uhrzeigersinn_bleibt_unveraendert(self):
+        self.assertEqual(fetch_ems.orient_ring(self.GEGEN_UHR), self.GEGEN_UHR)
+
+    def test_im_uhrzeigersinn_wird_gedreht(self):
+        gedreht = fetch_ems.orient_ring(list(reversed(self.GEGEN_UHR)))
+        self.assertEqual(gedreht, self.GEGEN_UHR)
+
+    def test_beide_richtungen_ergeben_dieselbe_folge(self):
+        """Das ist der Punkt: egal wie der Ring hereinkommt, er geht gleich hinaus."""
+        a = fetch_ems.orient_ring(self.GEGEN_UHR)
+        b = fetch_ems.orient_ring(list(reversed(self.GEGEN_UHR)))
+        self.assertEqual(a, b)
+
+    def test_flaeche_bleibt_gleich(self):
+        """Drehen darf die Geometrie nicht veraendern, nur ihre Reihenfolge."""
+        vorher = fetch_ems.ring_area_m2(self.GEGEN_UHR)
+        nachher = fetch_ems.ring_area_m2(fetch_ems.orient_ring(list(reversed(self.GEGEN_UHR))))
+        self.assertAlmostEqual(vorher, nachher, places=3)
+
+    def test_entartete_ringe_werfen_nicht(self):
+        """Zwei Punkte spannen keine Flaeche auf — die Funktion muss trotzdem
+        etwas zurueckgeben, statt den ganzen Lauf abzubrechen."""
+        for entartet in ([], [(0.0, 0.0)], [(0.0, 0.0), (1.0, 1.0)]):
+            self.assertEqual(len(fetch_ems.orient_ring(entartet)), len(entartet))
+
+
+class TestStuetzpunktzahl(unittest.TestCase):
+    """vertices_for() staffelt die Stuetzpunkte nach der Groesse der Teilflaeche.
+
+    Vorher bekam jede Nebenflaeche 48 — auch eine von fuenf Hektar, die bei den
+    gezeigten Zoomstufen etwa fuenf Bildpunkte breit ist. Bei ueber tausend
+    solchen Flaechen war das der groesste Posten der Datendatei: 912 auf 452 KB,
+    ohne dass eine Flaeche wegfaellt.
+    """
+
+    def test_grosse_flaechen_bekommen_die_volle_zahl(self):
+        self.assertEqual(fetch_ems.vertices_for(1000.0), fetch_ems.OTHER_VERTICES)
+        self.assertEqual(
+            fetch_ems.vertices_for(fetch_ems.OTHER_VERTICES_FULL_HA), fetch_ems.OTHER_VERTICES
+        )
+
+    def test_kleine_flaechen_bekommen_die_mindestzahl(self):
+        self.assertEqual(fetch_ems.vertices_for(0.0), fetch_ems.OTHER_VERTICES_MIN)
+
+    def test_dazwischen_steigt_es_monoton(self):
+        werte = [fetch_ems.vertices_for(ha) for ha in (5, 50, 150, 300, 450)]
+        self.assertEqual(werte, sorted(werte))
+        self.assertLess(werte[0], werte[-1], "sonst staffelt die Funktion gar nicht")
+
+    def test_nie_unter_der_mindestzahl(self):
+        """Ein Ring mit weniger als drei Punkten ist kein Umriss mehr."""
+        for ha in (-10.0, 0.0, 0.1, 4.9):
+            self.assertGreaterEqual(fetch_ems.vertices_for(ha), fetch_ems.OTHER_VERTICES_MIN)
+            self.assertGreaterEqual(fetch_ems.vertices_for(ha), 3)

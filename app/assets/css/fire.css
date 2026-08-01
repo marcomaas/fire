@@ -881,8 +881,8 @@ html.in-frame #main {
  *
  * Blau, nicht Gelb: Gelb markiert in dieser Liste den ausgewaehlten Eintrag
  * (ganzflaechig). Ein gelbes Viereck davor bedeutete damit etwas anderes als
- * dieselbe Farbe zwei Zeilen hoeher — Marco hat am 31.07.2026 gefragt, was das
- * Viereck bei Paris soll, waehrend Bordeaux gelb ausgewaehlt war. Blau ist im
+ * dieselbe Farbe zwei Zeilen hoeher — Aufgefallen am 31.07.2026: ein Viereck in
+ * derselben Farbe wie die Auswahl-Hervorhebung, zwei Zeilen darueber. Blau ist im
  * ganzen Erscheinungsbild die Farbe der Nebenangabe, und genau das ist es. */
 #map-compare a.nearest::before {
 	content: "";

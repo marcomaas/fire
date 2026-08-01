@@ -226,6 +226,31 @@ def polygon_area_ha(geom):
     return total / 10000.0
 
 
+def orient_ring(coords):
+    """Bringt einen Ring in eine feste Umlaufrichtung (gegen den Uhrzeigersinn).
+
+    Der Ueberblend-Algorithmus von 2013 setzt voraus, dass beide Umrisse gleich
+    herum laufen: `rotate` sucht ein Startpaar und `resample` richtet die Folgen
+    monoton aneinander aus. Laufen sie gegeneinander, ordnet das Alignment
+    gegenueberliegende Seiten einander zu, und die Zwischenformen sind nicht mehr
+    ungenau, sondern grotesk.
+
+    Erzwungen wurde die Richtung bisher nirgends. Shapely garantiert die
+    Orientierung eines `exterior` nicht ueber alle Pfade hinweg — `union_all`,
+    `simplify` und `buffer(0)` koennen sie drehen. Bislang ist kein Fall
+    aufgetreten; das ist Glueck, keine Zusicherung.
+
+    Vorzeichen der doppelten Trapezflaeche: positiv heisst im Uhrzeigersinn in
+    einem Koordinatensystem mit x nach rechts und y nach oben.
+    """
+    zwei_a = 0.0
+    for i in range(len(coords) - 1):
+        x1, y1 = coords[i][0], coords[i][1]
+        x2, y2 = coords[i + 1][0], coords[i + 1][1]
+        zwei_a += (x2 - x1) * (y2 + y1)
+    return list(reversed(coords)) if zwei_a > 0 else list(coords)
+
+
 def vertices_for(area_ha):
     """Stuetzpunkte fuer eine Nebenflaeche, nach ihrer Groesse.
 
@@ -380,7 +405,10 @@ def outline(geojson):
     ring_lonlat = resample_ring(exterior, MAX_VERTICES)
 
     # Leaflet erwartet die Reihenfolge Breite, Laenge - GeoJSON liefert sie umgekehrt.
-    ring = [[round(lat, COORD_DECIMALS), round(lon, COORD_DECIMALS)] for lon, lat in ring_lonlat]
+    ring = [
+        [round(lat, COORD_DECIMALS), round(lon, COORD_DECIMALS)]
+        for lon, lat in orient_ring(ring_lonlat)
+    ]
 
     # Die uebrigen Teilflaechen werden nicht ueberblendet, aber mitgezeichnet,
     # damit Flaechenangabe und Bild zusammenpassen. Bei stark zerstreuten
@@ -399,7 +427,7 @@ def outline(geojson):
             simple = part
         if simple.geom_type == "MultiPolygon":
             simple = max(simple.geoms, key=polygon_area_ha)
-        coords = resample_ring(list(simple.exterior.coords), vertices_for(teil_ha))
+        coords = resample_ring(orient_ring(list(simple.exterior.coords)), vertices_for(teil_ha))
         others.append(
             [[round(lat, COORD_DECIMALS), round(lon, COORD_DECIMALS)] for lon, lat in coords]
         )
@@ -770,7 +798,7 @@ def slim_fires(fires):
             for ring in step.get("others", []):
                 vorher_punkte += len(ring)
                 # ring_area_m2 erwartet (lon, lat) — gespeichert ist (lat, lon).
-                lonlat = [(lon, lat) for lat, lon in ring]
+                lonlat = orient_ring([(lon, lat) for lat, lon in ring])
                 flaeche_ha = ring_area_m2(lonlat) / 10000.0
                 ziel = vertices_for(flaeche_ha)
                 if ziel < len(ring):
