@@ -153,11 +153,14 @@
 				</dd>
 
 				<dt>Between two acquisitions</dt>
-				<dd>Timestamp and area figure are carried forward linearly, and where outlines are morphed
-					the same holds for the shape: the intermediate outlines are computed, not observed. A
-					presentational aid, not a measurement — what happened between two overpasses cannot be
-					known from this data. The state already reached stays on the map, so burnt area never
-					comes to look unburnt.</dd>
+				<dd>Timestamp and area figure are carried forward linearly. A presentational aid, not a
+					measurement — what happened between two overpasses cannot be known from this data.
+					<br><br>
+					The <strong>red area therefore changes only at an acquisition</strong>, never in
+					between: it shows what has been mapped, and grows in steps. While morphing, a thin
+					line additionally travels across the map — the computed path of the outline from one
+					state to the next. It can move inward, because the intermediate shapes are calculated
+					rather than observed; the burnt area does not.</dd>
 
 				<dt>Area figure</dt>
 				<dd>Sum of all mapped patches for that state. How change is shown depends on the fire: where one contiguous area dominates, its outline is morphed from state to state. Where the fire breaks into many separate patches, each state is faded in as a whole and stays — morphing would suggest standstill there while the total area grows. The second case currently applies to most of the fires.</dd>

@@ -44,6 +44,10 @@ var TOLERANZ = 0.03; // 3 % für Abtastung auf der Kante; gemessen wird ~1 %
 var PROBEN_RASTER = 40;
 var LAUFZEIT_MS = 16000;
 var TAKT_MS = 120;
+/* Ein paar Rasterpunkte liegen auf der Kante und kippen beim Nachzeichnen. */
+var RASTER_TOLERANZ = 12;  /* Nebenflächen werden je Stand neu gezeichnet; ein
+                            * paar Rasterpunkte wechseln dabei die Überdeckung,
+                            * ohne dass sich sichtbar etwas ändert. */
 
 /* Beide Sprachfassungen, und bewusst beide Darstellungsarten: gironde ist der
  * einzige Brand im Morph-Modus, artana steht für die Überblendung. Ein Test nur
@@ -81,14 +85,32 @@ function pruefe(fall, fertig) {
 		var wann = '';
 		var verschoben = false;
 		var kartenLage = null;
+		var raster = null;
+		var letzterStand = null;
+		var schrumpfungen = 0;
+		var groessterRueckgang = 0;
+		var schrumpfWann = '';
 
 		function roteFlaechen() {
 			var raus = [];
 			d.querySelectorAll('.leaflet-overlay-pane path').forEach(function (p) {
 				var fill = (p.getAttribute('fill') || '').toUpperCase();
+				/* Nur gefüllte Pfade. Der wandernde Überblend-Umriss ist seit dem
+				 * 01.08.2026 eine reine Linie (fill="none") — eine Linie behauptet
+				 * keine verbrannte Fläche, und sie darf sich deshalb auch nach innen
+				 * bewegen. */
 				if (fill === '#BE1313' && p.isPointInFill) raus.push(p);
 			});
 			return raus;
+		}
+
+		function ueberdeckung(x, y, pfade) {
+			var pt = new w.DOMPoint(x, y);
+			var n = 0;
+			for (var i = 0; i < pfade.length; i++) {
+				try { if (pfade[i].isPointInFill(pt)) n++; } catch (e) { /* leerer Pfad */ }
+			}
+			return n;
 		}
 
 		function istRot(x, y, pfade) {
@@ -136,6 +158,16 @@ function pruefe(fall, fertig) {
 				}
 				if (gefunden.length < 50) return;
 				punkte = gefunden;
+
+				/* Raster über die gesamte Karte, nicht nur über die Startfläche —
+				 * die Fläche wächst, und schrumpfen könnte sie überall. */
+				raster = [];
+				var b2 = d.querySelector('#map').getBoundingClientRect();
+				for (var rx = 10; rx < b2.width - 10; rx += 12) {
+					for (var ry = 10; ry < b2.height - 10; ry += 12) {
+						raster.push([rx, ry]);
+					}
+				}
 				return;
 			}
 
@@ -144,6 +176,37 @@ function pruefe(fall, fertig) {
 				if (istRot(punkte[i][0], punkte[i][1], pfade)) drin++;
 			}
 			proben++;
+
+			/* Zweite Invariante, und die eigentlich sichtbare: die rote Fläche darf
+			 * zwischen zwei Bildern nicht kleiner werden. Die erste Invariante
+			 * ("schon verbrannte Punkte bleiben rot") war dafür blind — sie blieb
+			 * grün, während die Helligkeit pulsierte, weil zwei halbdurchsichtige
+			 * Rot sich stapelten und beim Zurückweichen des Umrisses wieder
+			 * auseinandergingen. Marco hat das am 01.08.2026 in der laufenden
+			 * Anwendung gesehen; keine Prüfung hat es gemeldet.
+			 *
+			 * Gezählt wird über ein festes Raster über der Endausdehnung, nicht über
+			 * die Startfläche: sonst könnte die Fläche außerhalb davon schrumpfen,
+			 * ohne dass es auffällt. */
+			/* Nicht nur OB ein Punkt rot ist, sondern von WIE VIELEN Flächen er
+			 * überdeckt wird. Genau daran hing das, was zu sehen war: zwei
+			 * halbdurchsichtige Rot übereinander ergeben 0,89, eines allein 0,75 —
+			 * und beim Zurückweichen des Umrisses sprang die Helligkeit zurück. Die
+			 * Punktmenge blieb dabei unverändert rot, deshalb blieb die erste
+			 * Fassung dieser Prüfung grün. Die Überdeckung ist das, was der Browser
+			 * zu einer Farbe verrechnet. */
+			var gesamtDrin = 0;
+			for (var g = 0; g < raster.length; g++) {
+				gesamtDrin += ueberdeckung(raster[g][0], raster[g][1], pfade);
+			}
+			if (letzterStand !== null && gesamtDrin < letzterStand - RASTER_TOLERANZ) {
+				schrumpfungen++;
+				groessterRueckgang = Math.max(groessterRueckgang, letzterStand - gesamtDrin);
+				if (!schrumpfWann) {
+					schrumpfWann = (d.getElementById('map-date') || {}).textContent.trim();
+				}
+			}
+			letzterStand = Math.max(letzterStand === null ? 0 : letzterStand, gesamtDrin);
 			var raus = punkte.length - drin;
 			if (raus > maxVerlust) {
 				maxVerlust = raus;
@@ -162,6 +225,12 @@ function pruefe(fall, fertig) {
 				!!punkte && punkte.length >= 50,
 				punkte ? punkte.length + ' Prüfpunkte' : 'keine rote Fläche gefunden');
 			check(tag + ' | Animation lief', proben >= 20, proben + ' Proben');
+
+			check(tag + ' | rote Fläche wird zwischen zwei Bildern nie schwächer',
+				schrumpfungen === 0,
+				schrumpfungen + ' von ' + proben + ' Bildern zeigten weniger Fläche als das ' +
+				'vorige, größter Rückgang ' + groessterRueckgang + ' Überdeckungen' +
+				(schrumpfWann ? ', zuerst bei ' + schrumpfWann : ''));
 
 			if (punkte && punkte.length) {
 				var anteil = maxVerlust / punkte.length;

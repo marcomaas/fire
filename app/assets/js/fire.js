@@ -572,8 +572,8 @@ $(document).ready(function () {
   var morphOutlineStyle = {
     stroke: true,
     color: "#8A0B0B",
-    opacity: 0.9,
-    weight: 2,
+    opacity: 0.55,
+    weight: 1,
     fill: false,
   };
 
@@ -937,7 +937,7 @@ $(document).ready(function () {
 
     /* Fuellung aus, solange gemorpht wird. finish() stellt sie fuer den Endstand
      * wieder her — dort ist der Umriss eine Messung und keine Zwischenform. */
-    firePoly.setStyle(morphOutlineStyle);
+    firePoly.setStyle(firePolyStyle);
 
     function morphStep() {
       var from = fire.steps[index];
